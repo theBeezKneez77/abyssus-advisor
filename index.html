@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abyssus Build Advisor</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  :root{
+    --bg:#0a1519; --bg-deep:#060e12; --surface:#102129; --surface-2:#16303a; --line:#23444f;
+    --accent:#27b094; --accent-dim:#12463c; --brass:#c8a24e; --brass-dim:#6b5526;
+    --warn:#cf9233; --danger:#e2645b;
+    --text:#e7eef0; --muted:#8ba1a8; --faint:#5d727a;
+    --serif:'Iowan Old Style','Palatino Linotype','Book Antiqua',Palatino,Georgia,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    color:var(--text);
+    background:
+      radial-gradient(120% 80% at 50% -10%, #14323b 0%, rgba(20,50,59,0) 55%),
+      radial-gradient(140% 100% at 50% 120%, #0c2026 0%, rgba(12,32,38,0) 50%),
+      #0a1519;
+    background-attachment:fixed;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  /* ---------- Header ---------- */
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; border-bottom:1px solid var(--brass-dim);
+    position:sticky; top:0; z-index:50;
+    background:linear-gradient(180deg, #0d212a 0%, #0a1519 100%);
+    box-shadow:0 1px 0 rgba(200,162,78,.15), 0 6px 18px rgba(0,0,0,.4);
+    flex-wrap:wrap; gap:10px;
+  }
+  header h1{font-family:var(--serif); font-size:24px; font-weight:600; letter-spacing:.3px; color:#f1ece0}
+  header h1::before{content:"\2693"; color:var(--brass); margin-right:8px; font-size:20px}
+  header h1 .sub{display:block; font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; color:var(--muted); font-weight:400; letter-spacing:.3px; margin-left:26px}
+  #reset{
+    background:var(--surface-2); color:var(--text); border:1px solid var(--line);
+    border-radius:7px; padding:7px 12px; font-size:14px; cursor:pointer;
+  }
+  #reset:hover{border-color:var(--accent); color:var(--accent)}
+  header.runlog #reset{display:none}
+  /* ---------- View tabs ---------- */
+  .viewtabs{display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:3px}
+  .vtab{background:none; border:none; color:var(--muted); font:inherit; font-size:14px; padding:6px 12px; border-radius:7px; cursor:pointer; display:flex; align-items:center; gap:5px}
+  .vtab:hover{color:var(--text)}
+  .vtab.active{background:var(--accent); color:#fff; font-weight:600}
+  /* ---------- Icon images ---------- */
+  .iconwrap{display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; vertical-align:middle}
+  .iconwrap img{width:100%; height:100%; object-fit:contain; display:block}
+  .iconfb{line-height:1}
+  /* ---------- Layout (single spacious column) ---------- */
+  main{max-width:860px; margin:0 auto; padding:24px 18px 64px}
+  .panels{display:grid; grid-template-columns:1fr; gap:22px}
+  .panel{
+    position:relative;
+    background:linear-gradient(180deg, #122530 0%, #0e1f27 100%);
+    border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; display:flex; flex-direction:column;
+    box-shadow:0 8px 26px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+    transition:opacity .2s ease;
+  }
+  /* brass corner brackets on the active step */
+  .panel.active::before, .panel.active::after{
+    content:""; position:absolute; width:16px; height:16px; pointer-events:none; z-index:2;
+    color:var(--brass); opacity:.65;
+  }
+  .panel.active::before{top:8px; left:8px; border-top:2px solid; border-left:2px solid; border-top-left-radius:4px}
+  .panel.active::after{bottom:8px; right:8px; border-bottom:2px solid; border-right:2px solid; border-bottom-right-radius:4px}
+  .panel.locked{opacity:.55}
+  .panel.collapsed{box-shadow:0 4px 14px rgba(0,0,0,.3)}
+  .panel-header{
+    display:flex; align-items:center; gap:12px;
+    padding:15px 18px; border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(200,162,78,.06), rgba(0,0,0,0));
+    cursor:default;
+  }
+  .panel.complete .panel-header{cursor:pointer}
+  .panel-header .pnum{
+    width:28px; height:28px; border-radius:50%; flex:0 0 auto;
+    display:grid; place-items:center; font-size:16px; font-weight:700; font-family:var(--serif);
+    background:var(--surface-2); color:var(--muted); border:1px solid var(--line);
+  }
+  .panel.active .pnum{background:var(--accent); color:#04231c; border-color:var(--accent); box-shadow:0 0 12px rgba(39,176,148,.4)}
+  .panel.complete .pnum{background:transparent; color:var(--brass); border-color:var(--brass)}
+  .panel-header h2{font-family:var(--serif); font-size:20px; font-weight:600; flex:1; letter-spacing:.2px}
+  .panel-header h2 small{display:block; font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; color:var(--muted); font-weight:400; letter-spacing:.2px; margin-top:1px}
+  .status{font-size:12px; padding:3px 10px; border-radius:20px; white-space:nowrap; border:1px solid transparent}
+  .status.locked{background:var(--surface-2); color:var(--faint)}
+  .status.active{background:var(--accent-dim); color:var(--accent); border-color:rgba(39,176,148,.3)}
+  .status.complete{background:rgba(200,162,78,.12); color:var(--brass); border-color:rgba(200,162,78,.3)}
+  .status.check i{font-size:16px; vertical-align:-2px}
+  .chev{color:var(--faint); display:none; transition:transform .2s ease}
+  .panel.complete .chev{display:inline-flex}
+  .panel.collapsed .chev{transform:rotate(-90deg)}
+  .panel-body{padding:20px 18px 22px}
+  .panel.locked .panel-body{display:none}
+  /* ---------- Stepper ---------- */
+  .stepper{display:flex; align-items:center; justify-content:center; gap:6px; margin:2px 0 22px; flex-wrap:wrap}
+  .step{display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer; font:inherit; padding:4px 6px; color:var(--muted)}
+  .step:disabled{cursor:default; opacity:.5}
+  .step .stepnum{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-family:var(--serif); font-weight:700; font-size:16px; border:1px solid var(--line); background:var(--surface-2); color:var(--muted)}
+  .step .steplab{font-size:14px; letter-spacing:.4px}
+  .step.active .stepnum{background:var(--accent); color:#04231c; border-color:var(--accent); box-shadow:0 0 12px rgba(39,176,148,.4)}
+  .step.active .steplab{color:var(--text); font-weight:600}
+  .step.done .stepnum{background:transparent; color:var(--brass); border-color:var(--brass)}
+  .step.done .steplab{color:var(--brass)}
+  .stepbar{width:26px; height:2px; border-radius:2px; background:var(--line)}
+  .stepbar.lit{background:linear-gradient(90deg, var(--brass), var(--accent))}
+  /* ---------- Recap (collapsed step) ---------- */
+  .recap{display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; flex-wrap:wrap}
+  .recap-items{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .recap-i{display:inline-flex; align-items:center; gap:6px; font-size:16px}
+  .recap-i.strong{font-weight:600}
+  .recap-i.tag{font-size:12px; color:var(--muted); background:var(--surface-2); border:1px solid var(--line); border-radius:5px; padding:2px 8px}
+  .recap-edit{font-size:12px; color:var(--brass); white-space:nowrap; display:inline-flex; align-items:center; gap:4px}
+  .recap-edit:hover{text-decoration:underline}
+  .lockmsg{padding:18px 14px; color:var(--faint); font-size:14px; text-align:center}
+  .panel.locked .lockmsg{display:block}
+  .lockmsg{display:none}
+  .fade{animation:fade .2s ease}
+  @keyframes fade{from{opacity:0} to{opacity:1}}
+  .editlink{
+    display:inline-block; margin-bottom:10px; font-size:12px; color:var(--accent);
+    cursor:pointer; background:none; border:none; padding:0;
+  }
+  .editlink:hover{text-decoration:underline}
+  /* ---------- Field labels ---------- */
+  .field{margin-bottom:22px}
+  .field > label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--brass); margin-bottom:10px; font-weight:600}
+  .field > label::after{content:""; display:inline-block; width:30px; height:1px; background:var(--brass-dim); vertical-align:middle; margin-left:9px}
+  /* ---------- Weapon / ability grids ---------- */
+  .cardgrid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+  .tilecard{
+    position:relative; background:var(--surface-2); border:1px solid var(--line);
+    border-radius:10px; padding:16px 10px 12px; cursor:pointer; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:9px; color:var(--text); font:inherit;
+  }
+  .tilecard:hover{border-color:var(--accent)}
+  .tilecard.sel{border-color:var(--accent); background:rgba(39,176,148,.13)}
+  .tilecard.sel .ico{filter:drop-shadow(0 0 10px rgba(39,176,148,.45))}
+  .tilecard .ico{line-height:1; flex:0 0 auto}
+  .tilecard .nm{font-size:16px; font-weight:550; line-height:1.2}
+  .winfo{display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0}
+  .wcheck{display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--accent); cursor:pointer; margin-top:2px}
+  .wcheck input{width:13px; height:13px; accent-color:var(--accent); cursor:pointer; flex:0 0 auto; margin:0}
+  .wcheck .needtxt{color:var(--warn)}
+  .wcard.wdone{border-color:rgba(39,176,148,.4)}
+  /* ---------- Pills ---------- */
+  .pills{display:flex; flex-wrap:wrap; gap:7px}
+  .pill{
+    background:var(--surface-2); border:1px solid var(--line); border-radius:20px;
+    padding:7px 13px; font-size:14px; cursor:pointer; color:var(--text); font:inherit;
+    flex:1 1 auto; text-align:center; min-width:0;
+  }
+  .pill:hover{border-color:var(--accent)}
+  .pill.sel{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
+  /* ---------- Combo cards ---------- */
+  .combos{margin-top:6px; display:flex; flex-direction:column; gap:10px}
+  .combos-h{font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--brass); font-weight:600; margin-bottom:2px}
+  .combo{
+    background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+    padding:10px 11px; cursor:pointer; text-align:left; color:var(--text); font:inherit;
+  }
+  .combo:hover{border-color:var(--accent)}
+  .combo .ctitle{font-size:16px; font-weight:600; color:var(--accent); margin-bottom:3px}
+  .combo .cmods{font-size:12px; color:var(--text); margin-bottom:4px}
+  .combo .cmods b{color:var(--text); font-weight:600}
+  .combo .cwhy{font-size:12px; color:var(--muted); line-height:1.4}
+  /* ---------- Phase 2 note ---------- */
+  .phase2note{font-size:12px; color:var(--muted); background:var(--surface-2); border:1px dashed var(--line); border-radius:7px; padding:8px 10px; margin:-2px 0 14px; display:flex; gap:7px; align-items:flex-start; line-height:1.4}
+  .phase2note i{color:var(--accent); font-size:16px; flex:0 0 auto; margin-top:1px}
+  /* ---------- Blessing slots ---------- */
+  .slots{display:grid; grid-template-columns:1fr; gap:22px}
+  .slot > .slabel{font-family:var(--serif); font-size:16px; font-weight:600; margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .slot .slabel .pick{font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; color:var(--accent); font-weight:500; display:inline-flex; align-items:center; gap:4px}
+  .blessgrid{display:grid; grid-template-columns:repeat(2,1fr); gap:9px}
+  .bcard{
+    position:relative; background:var(--surface-2); border:1px solid var(--line);
+    border-radius:8px; padding:9px; cursor:pointer; text-align:left; color:var(--text); font:inherit;
+  }
+  .bcard:hover{border-color:var(--accent)}
+  .bcard.sel{border-color:var(--accent); background:rgba(39,176,148,.15)}
+  .bcard.rec{border-color:var(--accent)}
+  .bcard.disabled{opacity:.4; cursor:not-allowed}
+  .bcard .bhead{display:flex; align-items:center; gap:8px; margin-bottom:5px}
+  .bcard .bico{flex:0 0 auto}
+  .bcard .bname{font-size:14px; font-weight:600; flex:1; min-width:0; line-height:1.2}
+  .bcard .tier{flex:0 0 auto}
+  .bcard .bdesc{font-size:12px; color:var(--muted); line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+  .reclabel{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--accent); margin-bottom:3px}
+  .reclabel.proven{color:#fff; background:var(--accent); display:inline-block; padding:1px 5px; border-radius:4px}
+  .bcard.proven{border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent)}
+  .proven-hints{margin-top:12px; display:flex; flex-direction:column; gap:8px}
+  .proven-hint{background:rgba(29,158,117,.12); border:1px solid var(--accent-dim); border-radius:8px; padding:9px 11px; font-size:14px; line-height:1.4; display:flex; gap:9px; align-items:flex-start}
+  .proven-hint b{color:var(--accent)}
+  .ph-tag{flex:0 0 auto; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#fff; background:var(--accent); padding:2px 6px; border-radius:4px; margin-top:1px}
+  .ph-why{display:block; color:var(--muted); margin-top:3px}
+  .tier{font-size:12px; font-weight:700; padding:1px 5px; border-radius:4px}
+  .tier.S{background:#EEEDFE; color:#534AB7}
+  .tier.A{background:#E1ECFB; color:#2C5FB0}
+  .tier.B{background:#e6e6e6; color:#555}
+  .tier.C{background:#e6e6e6; color:#777}
+  /* ---------- Notes ---------- */
+  .note{border-radius:8px; padding:10px 12px; font-size:14px; margin-top:14px; line-height:1.45}
+  .note.synergy{background:rgba(39,176,148,.1); border:1px solid var(--accent-dim); color:var(--text)}
+  .note.synergy b{color:var(--accent)}
+  .note.warn{background:rgba(186,117,23,.13); border:1px solid rgba(186,117,23,.4); color:#e8c79a}
+  .note.err{background:rgba(226,75,74,.13); border:1px solid rgba(226,75,74,.5); color:#f0a3a2; margin-top:10px}
+  .milestone{background:var(--surface-2); border:1px solid var(--line); border-radius:7px; padding:8px 10px; font-size:12px; color:var(--muted); margin-bottom:10px; line-height:1.4}
+  .charm{font-size:12px; color:var(--accent); margin-top:8px; display:flex; gap:6px; align-items:flex-start}
+  /* ---------- Panel 3 columns ---------- */
+  .upcols{display:grid; grid-template-columns:1fr; gap:16px}
+  .upcol{background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:11px}
+  .upcol-h{display:flex; align-items:center; gap:7px; margin-bottom:9px; padding-bottom:9px; border-bottom:1px solid var(--line)}
+  .upcol-h .slotkind{font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--brass)}
+  .upcol-h .bname{font-family:var(--serif); font-size:18px; font-weight:600}
+  .upcol-h .bico{font-size:20px}
+  .charm{color:var(--brass) !important}
+  .upg{background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:8px 9px; margin-bottom:7px}
+  .upg .un{font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center; gap:8px}
+  .upg .ud{font-size:12px; color:var(--muted); margin-top:3px; line-height:1.35}
+  .pbadge{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:2px 6px; border-radius:4px; white-space:nowrap; flex:0 0 auto}
+  .pbadge.first{background:var(--accent-dim); color:var(--accent)}
+  .pbadge.maybe{background:rgba(186,117,23,.18); color:var(--warn)}
+  .pbadge.skip{background:var(--surface-2); color:var(--faint)}
+  /* ---------- Summary ---------- */
+  .summary{
+    position:relative; margin:24px 0 8px;
+    background:linear-gradient(180deg, #14323b 0%, #0f2128 100%);
+    border:1px solid var(--brass-dim); border-radius:12px; padding:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(200,162,78,.12);
+  }
+  .summary::before,.summary::after{content:""; position:absolute; width:16px; height:16px; color:var(--brass); opacity:.7; pointer-events:none}
+  .summary::before{top:9px; left:9px; border-top:2px solid; border-left:2px solid; border-top-left-radius:4px}
+  .summary::after{bottom:9px; right:9px; border-bottom:2px solid; border-right:2px solid; border-bottom-right-radius:4px}
+  .summary h3{font-family:var(--serif); font-size:20px; margin-bottom:3px; color:var(--brass)}
+  .summary .ssub{font-size:12px; color:var(--muted); margin-bottom:15px; letter-spacing:.3px}
+  .srow{display:flex; flex-wrap:wrap; gap:8px 18px; margin-bottom:13px}
+  .sitem{font-size:14px}
+  .sitem .k{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted)}
+  .sitem .v{font-weight:600}
+  .sgrid{display:grid; grid-template-columns:1fr; gap:9px}
+  .sbless{background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:9px 10px}
+  .sbless .sb-h{font-size:14px; font-weight:600; margin-bottom:4px}
+  .sbless .sb-up{font-size:12px; color:var(--muted); line-height:1.4}
+  .sbless .sb-up b{color:var(--accent); font-weight:600}
+  .hidden{display:none !important}
+  /* ---------- Run Log ---------- */
+  .rl-head{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+  .rl-head h2{font-family:var(--serif); font-size:22px; font-weight:600; color:#f1ece0}
+  .rl-head h2 small{display:block; font-size:12px; color:var(--muted); font-weight:400; letter-spacing:.3px}
+  .rl-actions{display:flex; gap:7px}
+  .btn{background:var(--surface-2); color:var(--text); border:1px solid var(--line); border-radius:7px; padding:7px 12px; font-size:14px; cursor:pointer; font:inherit; display:inline-flex; align-items:center; gap:5px}
+  .btn:hover{border-color:var(--accent); color:var(--accent)}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
+  .btn.primary:hover{color:#fff; filter:brightness(1.08)}
+  .btn.danger{color:var(--danger)}
+  .btn.danger:hover{border-color:var(--danger)}
+  .rl-grid{display:grid; grid-template-columns:1fr; gap:16px}
+  .card{background:linear-gradient(180deg, #122530 0%, #0e1f27 100%); border:1px solid var(--line); border-radius:12px; padding:16px; box-shadow:0 6px 20px rgba(0,0,0,.3)}
+  .card > h3{font-family:var(--serif); font-size:18px; margin-bottom:14px; display:flex; align-items:center; gap:7px; color:#eadfae}
+  .card > h3 i{color:var(--brass)}
+  .formgrid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+  .fg-full{grid-column:1/-1}
+  .ff label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:4px}
+  .ff input, .ff select{width:100%; background:var(--surface-2); border:1px solid var(--line); border-radius:6px; color:var(--text); font:inherit; font-size:14px; padding:7px 8px}
+  .ff input:focus, .ff select:focus{outline:none; border-color:var(--accent)}
+  .ff select:disabled{opacity:.5}
+  .form-foot{display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap}
+  .form-foot .hint{font-size:12px; color:var(--faint)}
+  /* Insights */
+  .kpis{display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin-bottom:14px}
+  .kpi{background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:10px}
+  .kpi .kv{font-family:var(--serif); font-size:24px; font-weight:700; color:var(--brass)}
+  .kpi .kl{font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-top:2px}
+  .lead{margin-bottom:6px}
+  h4, .lead h4{font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--brass); margin:14px 0 8px; font-weight:600}
+  .bar{display:flex; align-items:center; gap:8px; margin-bottom:5px; font-size:14px}
+  .bar .blab{flex:0 0 38%; display:flex; align-items:center; gap:5px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
+  .bar .btrack{flex:1; height:7px; background:var(--surface-2); border-radius:4px; overflow:hidden}
+  .bar .bfill{height:100%; background:var(--accent); border-radius:4px}
+  .bar .bval{flex:0 0 auto; font-size:12px; color:var(--muted); min-width:64px; text-align:right}
+  .emptynote{font-size:14px; color:var(--faint); padding:8px 0}
+  /* Tier note + blended tier board */
+  .tier-note{font-size:12px; color:var(--muted); background:rgba(200,162,78,.07); border:1px solid var(--brass-dim); border-radius:8px; padding:9px 11px; margin-bottom:16px; display:flex; gap:7px; align-items:flex-start; line-height:1.4}
+  .tier-note i{color:var(--brass); flex:0 0 auto; margin-top:1px}
+  .tierboard-head{display:flex; justify-content:space-between; font-size:12px; color:var(--faint); margin-bottom:6px; letter-spacing:.3px}
+  .tierrow{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 2px; border-bottom:1px solid var(--line)}
+  .tr-name{display:flex; align-items:center; gap:7px; font-size:13px; min-width:0}
+  .tr-badges{display:flex; align-items:center; gap:7px; flex:0 0 auto}
+  .tr-badges i{color:var(--faint); font-size:13px}
+  .tr-sep{color:var(--faint)}
+  .tier-none{font-size:12px; color:var(--faint); width:18px; text-align:center; display:inline-block}
+  /* Runs table */
+  .runrow{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--line); cursor:pointer}
+  .runrow:hover{background:var(--surface-2)}
+  .runrow .rr-main{flex:1; min-width:0}
+  .runrow .rr-t{font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+  .runrow .rr-s{font-size:12px; color:var(--muted); margin-top:2px}
+  .pill-status{font-size:12px; font-weight:700; text-transform:uppercase; padding:1px 6px; border-radius:4px}
+  .pill-status.win{background:var(--accent-dim); color:var(--accent)}
+  .pill-status.loss{background:rgba(226,75,74,.16); color:var(--danger)}
+  .rr-dmg{font-size:16px; font-weight:700; flex:0 0 auto; text-align:right}
+  .rr-dmg small{display:block; font-size:12px; color:var(--muted); font-weight:400; text-transform:uppercase; letter-spacing:.4px}
+  .rr-del{background:none; border:none; color:var(--faint); cursor:pointer; font-size:18px; padding:4px; flex:0 0 auto}
+  .rr-del:hover{color:var(--danger)}
+  .tag{font-size:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:4px; padding:1px 5px; color:var(--muted)}
+  /* ---------- Tablet ---------- */
+  @media(min-width:600px){
+    .cardgrid{grid-template-columns:repeat(3,1fr)}
+    .blessgrid{grid-template-columns:repeat(3,1fr)}
+    .sgrid{grid-template-columns:repeat(3,1fr)}
+    .kpis{grid-template-columns:repeat(4,1fr)}
+  }
+  /* ---------- Desktop (stays single spacious column) ---------- */
+  @media(min-width:700px){
+    .cardgrid{grid-template-columns:repeat(4,1fr)}
+    .blessgrid{grid-template-columns:repeat(3,1fr)}
+    .upcols{grid-template-columns:repeat(3,1fr)}
+    .rl-grid{grid-template-columns:1fr 1fr; align-items:start}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Abyssus Build Advisor<span class="sub">Plan your run, Workbench to Forge · v1.3</span></h1>
+  <nav class="viewtabs">
+    <button class="vtab active" data-action="view" data-view="advisor"><i class="ti ti-target-arrow"></i> Build Advisor</button>
+    <button class="vtab" data-action="view" data-view="runlog"><i class="ti ti-book"></i> Run Log</button>
+  </nav>
+  <button id="reset" data-action="reset"><i class="ti ti-rotate"></i> Start over</button>
+</header>
+
+<main>
+  <div id="view-advisor">
+  <div class="stepper" id="stepper"></div>
+  <div class="panels">
+    <!-- PANEL 1 -->
+    <section class="panel" id="panel-1">
+      <div class="panel-header" data-action="toggle-panel" data-step="1">
+        <span class="pnum">1</span>
+        <h2>Weapon setup<small>At the Workbench, before the run</small></h2>
+        <span class="status" id="status-1"></span>
+        <span class="chev"><i class="ti ti-chevron-down"></i></span>
+      </div>
+      <div class="panel-body" id="body-1"></div>
+    </section>
+
+    <!-- PANEL 2 -->
+    <section class="panel locked" id="panel-2">
+      <div class="panel-header" data-action="toggle-panel" data-step="2">
+        <span class="pnum">2</span>
+        <h2>Blessing slots<small>At the Altars, mid-run</small></h2>
+        <span class="status" id="status-2"></span>
+        <span class="chev"><i class="ti ti-chevron-down"></i></span>
+      </div>
+      <div class="lockmsg">Complete your weapon setup to unlock blessing slots.</div>
+      <div class="panel-body" id="body-2"></div>
+    </section>
+
+    <!-- PANEL 3 -->
+    <section class="panel locked" id="panel-3">
+      <div class="panel-header">
+        <span class="pnum">3</span>
+        <h2>Blessing upgrades<small>At Ancient Forges, throughout</small></h2>
+        <span class="status" id="status-3"></span>
+      </div>
+      <div class="lockmsg">Fill all three blessing slots to unlock upgrade priorities.</div>
+      <div class="panel-body" id="body-3"></div>
+    </section>
+  </div>
+
+  <div id="summary-wrap"></div>
+  </div><!-- /view-advisor -->
+
+  <div id="view-runlog" class="hidden"></div>
+</main>
+
+<script>
+/* ============================================================= DATA */
+const ABILITY_ICONS = {
+  'Frag Grenade':'💣','Anchor':'⚓','Smiting Spear':'🗡️','Ancient Core':'💎','Brine Field':'🌊','Turret':'🤖'
+};
+
+const DATA = {
+  weapons: [
+    {
+      id:'engine-rifle', name:'Engine Rifle', icon:'🔫', needsCompletion:true, confirmed:false,
+      primaryMods:['Automatic Fire','Burst Fire','Gatling Fire'],
+      secondaryMods:['Engine Rev','Split Shot','Concentrated Shot'],
+      slotRecs:{primary:['fortune','lightning','fire'], secondary:['shadow','blood','fortune'], ability:['defense','fortune','frost']},
+      combos:[
+        {primary:'Gatling Fire', secondary:'Engine Rev', ability:'Turret', label:'Gold turret', why:'High fire rate triggers frequent Goldburst procs; turrets proc Gold independently per shot. Game Rant names Engine Rifle as Fortune’s best primary.', playstyle:'economy'},
+        {primary:'Automatic Fire', secondary:'Split Shot', ability:'Turret', label:'Chain lightning', why:'Full-auto fire triggers constant Lightning chain procs; Blood secondary stacks Hemorrhage between bursts.', playstyle:'mob-clear'},
+        {primary:'Burst Fire', secondary:'Concentrated Shot', ability:'Frag Grenade', label:'Burn cluster', why:'Fire primary burns; Wind grenade clusters packs and Flare-chains through the survivors.', playstyle:'aoe'},
+      ],
+    },
+    {
+      id:'shotgun', name:'Shotgun', icon:'💥', needsCompletion:false, confirmed:false,
+      primaryMods:['Semi-automatic','Full-automatic','Superheavy Slug'],
+      secondaryMods:['Buckshot','Unload','Pressure Shot'],
+      slotRecs:{primary:['frost','blood','shadow'], secondary:['blood','shadow','frost'], ability:['defense','frost','wind']},
+      combos:[
+        {primary:'Superheavy Slug', secondary:'Pressure Shot', ability:'Turret', label:'Freeze & bleed (Deep 30)', why:'Confirmed Deep 30: Frost slug + Blood pressure shot + Defense/Barrier turret. Huge single hits freeze; Blood layers Hemorrhage.', playstyle:'boss'},
+        {primary:'Full-automatic', secondary:'Buckshot', ability:'Anchor', label:'Shadow freeze', why:'Shadow primary tags for 20% bonus; Frost secondary builds Freeze. Anchor clears Un’glu crystal phases.', playstyle:'boss'},
+        {primary:'Semi-automatic', secondary:'Pressure Shot', ability:'Frag Grenade', label:'Burn slug', why:'Fire primary + Blood pressure shot; Wind grenade clusters enemies and keeps Flare cycling.', playstyle:'aoe'},
+      ],
+    },
+    {
+      id:'tesla-gun', name:'Tesla Gun', icon:'⚡', needsCompletion:false, confirmed:true,
+      primaryMods:['Electrical Beam','Charge Beam','Unstable Coil'],
+      secondaryMods:['Spark Orb','Charge Orb','Magnetic Storm'],
+      slotRecs:{primary:['blood','fortune','lightning'], secondary:['shadow','fortune','frost'], ability:['defense','spirit','blood']},
+      combos:[
+        {primary:'Electrical Beam', secondary:'Magnetic Storm', ability:'Turret', label:'Blood gold loop (270B)', why:'The 270-billion-damage Loop 10 build. Blood beam + Gold storm + Barrier turret = zero damage taken at 7–8k gold.', playstyle:'endgame'},
+        {primary:'Charge Beam', secondary:'Spark Orb', ability:'Ancient Core', label:'Spark core', why:'Player favourite. Gold charge beam + Shadow Spark Orbs tag the room; Spirit core fires multi-hit bursts that feed the gauge.', playstyle:'mob-clear'},
+        {primary:'Electrical Beam', secondary:'Spark Orb', ability:'Turret', label:'Burn beam', why:'Fire beam maintains burn; Shadow Spark Orbs share 30% pain; Blood turret stacks Hemorrhage for compounding ticks.', playstyle:'aoe'},
+      ],
+    },
+    {
+      id:'brine-revolver', name:'Brine Revolver', icon:'🔱', needsCompletion:true, confirmed:false,
+      primaryMods:['Semi-automatic','Burst Fire','Large Caliber'],
+      secondaryMods:['Steady Scope','Quick Scope','Charge Scope'],
+      slotRecs:{primary:['lightning','blood','frost'], secondary:['wind','spirit','lightning'], ability:['blood','defense','shadow']},
+      combos:[
+        {primary:'Semi-automatic', secondary:'Quick Scope', ability:'Anchor', label:'Windburst (broken)', why:'Community’s most broken combo. Lightning primary; Windburst scales off the revolver’s 5%-per-shot stacking damage — 100k+ hits. Fan charm required.', playstyle:'boss'},
+        {primary:'Large Caliber', secondary:'Steady Scope', ability:'Ancient Core', label:'Million-dmg spirits', why:'“1 million per bullet at max stacks.” Blood aimed shots + Spirit secondary + weakspot mods. Confirmed ascension 100.', playstyle:'single-target'},
+        {primary:'Burst Fire', secondary:'Charge Scope', ability:'Turret', label:'Frost snipe', why:'Charged Frost shots insta-freeze single targets; Lightning chains off frozen enemies; Defense turret holds Barrier.', playstyle:'boss'},
+      ],
+    },
+    {
+      id:'disc-thrower', name:'Disc Thrower', icon:'🛸', needsCompletion:true, confirmed:false,
+      primaryMods:['Automatic','Fan Fire','Dynamo'],
+      secondaryMods:['Inferno Discs','Electron Conductors','Search and Destroy'],
+      slotRecs:{primary:['shadow','lightning','blood'], secondary:['frost','fortune','shadow'], ability:['defense','blood','frost']},
+      combos:[
+        {primary:'Dynamo', secondary:'Search and Destroy', ability:'Ancient Core', label:'Shadow freeze (Deep 30)', why:'Confirmed Deep 30: Shadow primary + Frost secondary + Barrier core. Fan + Search and Destroy charms.', playstyle:'mob-clear'},
+        {primary:'Automatic', secondary:'Electron Conductors', ability:'Turret', label:'Lightning discs', why:'All-discs-single-target + Gold secondary cleared Deep 30. Lightning for mobs; Blood turret melts bosses.', playstyle:'mob-clear'},
+        {primary:'Fan Fire', secondary:'Inferno Discs', ability:'Frag Grenade', label:'Burn bounce', why:'Fan + Fire: discs spread burn on every bounce; Wind secondary expands AoE; Blood grenade Hemorrhages the blast.', playstyle:'aoe'},
+      ],
+    },
+    {
+      id:'combat-bow', name:'Combat Bow', icon:'🏹', needsCompletion:false, confirmed:true,
+      primaryMods:['Precision Shot','Pierce','Return Arrow'],
+      secondaryMods:['Multi-Shot','Smart Arrow','Exploding Arrow'],
+      slotRecs:{primary:['fire','spirit','frost'], secondary:['lightning','frost','shadow'], ability:['defense','fire','spirit']},
+      combos:[
+        {primary:'Precision Shot', secondary:'Smart Arrow', ability:'Turret', label:'Burn & chain (your combo)', why:'YOUR CONFIRMED COMBO. Fire precision shots burn; Lightning Smart Arrow bounces burn across targets; Defense/Barrier turret for passive shields.', playstyle:'mob-clear'},
+        {primary:'Return Arrow', secondary:'Smart Arrow', ability:'Turret', label:'Spirit sweetspot (Deep 30)', why:'Confirmed Deep 30 bow build. Spirit sweetspots fill the gauge + Frost Smart Arrow; Fire turret with Fanning Flames sustains Flare. “Ultimate combo.”', playstyle:'single-target'},
+        {primary:'Precision Shot', secondary:'Exploding Arrow', ability:'Smiting Spear', label:'Charge burst', why:'Lightning charged precision for burst; Exploding Arrow spreads it; Blood Smiting Spear handles Un’glu crystal phases.', playstyle:'boss'},
+      ],
+    },
+    {
+      id:'plasma-launcher', name:'Plasma Launcher', icon:'🟣', needsCompletion:true, confirmed:false,
+      primaryMods:['Semi-automatic','Flak Cannon','Seekers'],
+      secondaryMods:['Disintegration Beam','Void Infusion','Adhesive Compound'],
+      slotRecs:{primary:['blood','fire','frost'], secondary:['shadow','wind','fire'], ability:['spirit','blood','wind']},
+      combos:[
+        {primary:'Semi-automatic', secondary:'Void Infusion', ability:'Ancient Core', label:'Blood pulse', why:'Confirmed Sole 15 clear. Core → Shadow pulse → drain Blood primary. Chain-explosion upgrade amplifies Hemorrhage per blast.', playstyle:'boss'},
+        {primary:'Flak Cannon', secondary:'Adhesive Compound', ability:'Anchor', label:'Burn rooms', why:'Fan + Mr. Boom Fire flak “deletes rooms in no time”; Wind adhesive compound clusters; Blood Anchor clears crystals.', playstyle:'aoe'},
+        {primary:'Seekers', secondary:'Disintegration Beam', ability:'Frag Grenade', label:'Spirit set-and-forget', why:'“Spirit primary, don’t have to touch anything else.” Homing Seekers + 60% re-explode fills the gauge constantly; Wind grenade adds an AoE layer.', playstyle:'mob-clear'},
+      ],
+    },
+    {
+      id:'fish-deity', name:'Fish Deity', icon:'🐟', needsCompletion:true, confirmed:false,
+      primaryMods:['Rapid Goo','Fish Spit','Hazardous Goo'],
+      secondaryMods:['Piercing Stab','Wide Stab','Chainsaw'],
+      slotRecs:{primary:['frost','fortune','blood'], secondary:['lightning','blood','frost'], ability:['shadow','frost','blood']},
+      combos:[
+        {primary:'Fish Spit', secondary:'Chainsaw', ability:'Turret', label:'Freeze chainsaw (broken)', why:'Most-cited Fish build. Frost spit (aim at the floor) freezes; Shadow turret tags; Lightning chainsaw chains off frozen/tagged targets.', playstyle:'mob-clear'},
+        {primary:'Rapid Goo', secondary:'Piercing Stab', ability:'Anchor', label:'Gold goo', why:'“Overall best build.” Gold goo procs Goldburst; Blood Piercing Stab secondary Hemorrhages on weakspots; Frost Anchor handles crystal phases.', playstyle:'economy'},
+        {primary:'Hazardous Goo', secondary:'Chainsaw', ability:'Brine Field', label:'Burn zone', why:'Shadow chainsaw tags; Brine Field with Blood sustains Hemorrhage in-zone; Fire goo stacks Flare across shadowed targets.', playstyle:'aoe'},
+      ],
+    },
+    {
+      id:'harpoon-gun', name:'Harpoon Gun', icon:'🪝', needsCompletion:true, confirmed:false,
+      primaryMods:['Piercing Harpoons','Ricocheting Harpoons','Pinning Harpoons'],
+      secondaryMods:['Barbed Harpoons','Binding Harpoons','Brine-Powered Harpoons'],
+      slotRecs:{primary:['lightning','frost','blood'], secondary:['wind','blood','lightning'], ability:['blood','frost','defense']},
+      combos:[
+        {primary:'Ricocheting Harpoons', secondary:'Binding Harpoons', ability:'Anchor', label:'Windburst combo', why:'“Fan and Plentiful Combo make it incredibly OP.” Lightning harpoons ricochet to build combo; Wind burst fires Windburst across all targets; Blood Anchor for crystals.', playstyle:'boss'},
+        {primary:'Pinning Harpoons', secondary:'Barbed Harpoons', ability:'Smiting Spear', label:'Freeze shatter', why:'Frost harpoons pin and build Freeze; Blood combo burst shatters frozen targets; Lightning Smiting Spear pulses chain lightning in-zone.', playstyle:'single-target'},
+        {primary:'Piercing Harpoons', secondary:'Brine-Powered Harpoons', ability:'Turret', label:'Bleed burst', why:'High per-hit Blood harpoons trigger Hemorrhage; Gold combo burst executes weak targets; Frost turret sustains Freeze during reloads.', playstyle:'mob-clear'},
+      ],
+    },
+  ],
+
+  abilities:['Frag Grenade','Anchor','Smiting Spear','Ancient Core','Brine Field','Turret'],
+
+  blessings:[
+    {id:'lightning', name:'Lightning', icon:'⚡', tier:'S', crystalSafe:false, bestSlot:'primary',
+      description:'Chains damage across nearby enemies. Crit synergy and fast crowd clear.',
+      synergises:['frost','fire','shadow'],
+      upgrades:['Static Repetition','Thunder Strike','Charging Bounce','Malignant Lightning','Static Zone','Static Concussion'],
+      priorityUpgrades:['Static Repetition','Thunder Strike'],
+      charm:'Fan charm spreads Chain Lightning to nearby targets.'},
+    {id:'fire', name:'Fire', icon:'🔥', tier:'S', crystalSafe:false, bestSlot:'primary',
+      description:'Applies Burn on hit. Burning enemies can Flare for a burst of bonus damage when hit by any source.',
+      synergises:['lightning','shadow','wind'],
+      upgrades:['Linked Flames','Stacking Flames','Fanning Flames','Weakening Flames','Critical Flames'],
+      priorityUpgrades:['Linked Flames','Stacking Flames'],
+      charm:'Mr. Boom doubles Flare explosions for this slot.'},
+    {id:'blood', name:'Blood', icon:'🩸', tier:'S', crystalSafe:false, bestSlot:'primary',
+      description:'Applies Hemorrhage and scales with max HP. Highest late-game damage ceiling.',
+      synergises:['fortune','shadow','frost'],
+      upgrades:['Steeped in Blood','Branding Blood','Blood Offering'],
+      priorityUpgrades:['Steeped in Blood','Branding Blood'],
+      charm:'Blessed (+10% dmg per blessing) scales Hemorrhage hard.'},
+    {id:'frost', name:'Frost', icon:'❄️', tier:'S', crystalSafe:true, bestSlot:'primary',
+      description:'Builds Freeze meter for crowd control. Deals % max-HP damage to bosses and damages Un’glu crystals.',
+      synergises:['shadow','blood','lightning'],
+      upgrades:['Quick Freeze','Brittle Freeze','Frostbite','Enduring Freeze'],
+      priorityUpgrades:['Quick Freeze','Brittle Freeze'],
+      charm:'Freebie keeps your freeze ability online for permafreeze.'},
+    {id:'fortune', name:'Fortune (Gold)', icon:'🪙', tier:'S', crystalSafe:false, bestSlot:'secondary',
+      description:'Goldburst damage and execution threshold. Best early game; damage reduction scales with gold held.',
+      synergises:['blood','shadow','frost'],
+      upgrades:['Exponential Gold','Golden Skin','Midas Touch','Precise Gold'],
+      priorityUpgrades:['Exponential Gold','Midas Touch'],
+      charm:'Rich Get Richer amplifies Gold scaling on Turret/Anchor.'},
+    {id:'ocean', name:'Ocean', icon:'🌊', tier:'C', crystalSafe:false, bestSlot:'primary',
+      description:'Spawns tentacles from weapon hits that fire throwables independently. Allies (incl. turrets) boost its damage.',
+      synergises:['shadow','blood','wind'],
+      upgrades:['Rapid Tentacles','Oceanic Explosives','Oceanic Supplies','Oceanic Acid','Oceanic Anchors'],
+      priorityUpgrades:['Rapid Tentacles','Oceanic Explosives'],
+      charm:'Fan charm multiplies tentacle spawns for this slot.'},
+    {id:'brine', name:'Brine', icon:'🧪', tier:'B', crystalSafe:false, bestSlot:'secondary',
+      description:'Throws vials of brine on hit that burst into acid — spreading damage and shredding enemy armor across nearby targets.',
+      synergises:['blood','shadow','frost'],
+      upgrades:['Splattering Brine','Detonating Brine','Expanding Brine','Acidic Brine','Bouncing Brine','Lethal Brine'],
+      priorityUpgrades:['Splattering Brine','Detonating Brine'],
+      charm:'Mr. Boom doubles Brine vial detonations for this slot.'},
+    {id:'spirit', name:'Spirit', icon:'👻', tier:'B', crystalSafe:false, bestSlot:'primary',
+      description:'Fills a Spirit gauge for burst DPS. Faster gauge = more uptime.',
+      synergises:['frost','blood','shadow'],
+      upgrades:['Rapid Spirits','Barraging Spirits','Exploding Spirits','Abundant Spirits'],
+      priorityUpgrades:['Rapid Spirits','Barraging Spirits'],
+      charm:'Freebie charm = near-permanent Spirit-gauge DPS.'},
+    {id:'shadow', name:'Shadow (Night)', icon:'🌑', tier:'B', crystalSafe:false, bestSlot:'primary',
+      description:'Tags enemies for 30% shared pain and amplifies debuffs. Does NOT damage Un’glu crystals.',
+      synergises:['frost','blood','lightning'],
+      upgrades:['Night’s Minor Blessing','Infected Shadows','Weakening Shadows','Exposing Shadows'],
+      priorityUpgrades:['Night’s Minor Blessing','Exposing Shadows'],
+      charm:'Backline boosts allies hitting shared-pain targets.'},
+    {id:'wind', name:'Wind', icon:'💨', tier:'B', crystalSafe:false, bestSlot:'secondary',
+      description:'Windburst explosions and AoE expansion. Excellent on Grenade and Tesla/Revolver secondaries.',
+      synergises:['blood','shadow','frost'],
+      upgrades:['Roaring Winds','Eye of the Storm','Whirling Winds','Culling Winds'],
+      priorityUpgrades:['Roaring Winds','Eye of the Storm'],
+      charm:'Fan charm multiplies Windburst AoE for this slot.'},
+    {id:'defense', name:'Defense (Barrier)', icon:'🛡️', tier:'A', crystalSafe:false, bestSlot:'ability',
+      description:'Passive Barrier uptime and reflected damage. Aggressive survivability — best on the ability slot (Turret/Core).',
+      synergises:['blood','fortune','frost'],
+      upgrades:['Rapid Barrier','Retaliating Barrier','Panicked Barrier'],
+      priorityUpgrades:['Rapid Barrier','Retaliating Barrier'],
+      charm:'Freebie charm keeps Barrier uptime near-permanent.'},
+  ],
+
+  // Triadic synergies (blessing-id keyed: primary / secondary / ability slot)
+  synergies:[
+    {primary:'fire', secondary:'lightning', ability:'defense', label:'Burn & chain', tier:'S', confirmed:true,
+      why:'Fire applies Burn on primary hits. Lightning chain secondary triggers Flare on every burning enemy at once. Defense on the Turret sustains Barrier passively while the room combusts.'},
+    {primary:'frost', secondary:'shadow', ability:'defense', label:'Freeze & shatter', tier:'S', confirmed:true,
+      why:'Frost builds Freeze on every primary hit. Exposing Shadows amplifies damage against Frozen targets. The ability holds Barrier (and Anchor/Spear can damage crystals).'},
+    {primary:'blood', secondary:'fortune', ability:'defense', label:'Gold blood barrier', tier:'S', confirmed:true,
+      why:'The 270-billion Tesla loop. Blood scales with max HP, Gold secondary feeds economy and damage reduction, Barrier turret means zero damage taken at 7–8k gold.'},
+    {primary:'frost', secondary:'blood', ability:'defense', label:'Freeze & bleed', tier:'S', confirmed:true,
+      why:'Confirmed Deep 30 Shotgun build. Frost freezes for % max-HP boss damage; Blood layers Hemorrhage; Defense/Barrier turret carries survivability.'},
+    {primary:'shadow', secondary:'frost', ability:'defense', label:'Shadow freeze barrier', tier:'S', confirmed:true,
+      why:'Confirmed Deep 30 Disc build. Shadow primary links 30% shared pain; Frost secondary freezes; Barrier on Ancient Core controls and sustains.'},
+    {primary:'spirit', secondary:'frost', ability:'fire', label:'Spirit sweetspot', tier:'A', confirmed:true,
+      why:'Confirmed Deep 30 Bow build. Spirit precision fills the gauge; Frost tracking secondary freezes; Fire turret with Fanning Flames sustains Flare on frozen targets.'},
+    {primary:'lightning', secondary:'wind', ability:'blood', label:'Windburst combo', tier:'S', confirmed:true,
+      why:'Community top combo. Lightning primary clears rooms; Windburst secondary scales off stacking damage to 100k+; Blood on Anchor handles crystal phases.'},
+    {primary:'fire', secondary:'shadow', ability:'wind', label:'Burn cluster', tier:'A', confirmed:false,
+      why:'Fire primary burns; Shadow secondary tags packs for 20% bonus; Wind grenade clusters enemies and Flare-chains through the survivors.'},
+    {primary:'blood', secondary:'shadow', ability:'spirit', label:'Bleed pulse', tier:'A', confirmed:true,
+      why:'Confirmed Plasma clear. Blood primary Hemorrhages; Shadow pulse secondary cascades shared pain; Spirit on Ancient Core multi-hits to refill the gauge.'},
+    {primary:'fortune', secondary:'shadow', ability:'spirit', label:'Gold spark core', tier:'A', confirmed:true,
+      why:'Player-favourite Tesla build. Gold beam executes and feeds the loop; Shadow Spark Orbs tag the room; Spirit core fires multi-hit bursts that refill the gauge.'},
+  ],
+
+  // Proven blessing+gear pairings — surfaced as "✓ Proven" in the matching slot
+  // and as a hint in Panel 1 when that gear is selected.
+  provenPairings:[
+    {blessing:'blood', ability:'Anchor', label:'Blood + Anchor', confirmed:true,
+      why:'Confirmed 28.3M-damage run with Blood at 80% of all damage. Anchor’s invincibility swings keep you alive while Blood scales off max HP — and Anchor directly damages Un’glu crystals.'},
+    {blessing:'ocean', ability:'Ancient Core', label:'Ocean on the Cube', confirmed:true,
+      why:'The Ancient Core (the “cube”) multi-hits the whole room, and every hit spawns Ocean tentacles that pile on independent damage. Ocean stays on-screen as long as the cube keeps firing.'},
+    {blessing:'lightning', weapon:'combat-bow', slots:['primary','secondary'], label:'Lightning Bow', confirmed:true,
+      why:'Lightning on the Combat Bow’s primary or secondary chains across every nearby target — confirmed runs hit 80% of total damage from Lightning alone.'},
+  ],
+};
+
+const UPGRADE_INFO = {
+  'Static Repetition':'Crits bounce back to previous targets.',
+  'Thunder Strike':'Adds an extra strike of bonus lightning.',
+  'Charging Bounce':'Chains gain damage with each bounce.',
+  'Malignant Lightning':'Chains apply a damage-over-time.',
+  'Static Zone':'Aura that grants bonus crit damage.',
+  'Static Concussion':'Chained hits briefly stun.',
+  'Linked Flames':'Burn spreads between nearby enemies.',
+  'Stacking Flames':'Burn stacks higher for more damage.',
+  'Fanning Flames':'Flare procs far more often.',
+  'Weakening Flames':'Burning enemies take more damage.',
+  'Critical Flames':'Flares can critically hit.',
+  'Steeped in Blood':'Damage scales with your max HP.',
+  'Branding Blood':'Hemorrhage stacks higher.',
+  'Blood Offering':'Convert HP into a damage surge.',
+  'Quick Freeze':'Build the Freeze meter faster.',
+  'Brittle Freeze':'Frozen enemies take massive bonus damage.',
+  'Frostbite':'Freeze deals % max-HP damage.',
+  'Enduring Freeze':'Freeze lasts longer.',
+  'Exponential Gold':'Goldburst scales with gold held.',
+  'Golden Skin':'Damage reduction per gold tier.',
+  'Midas Touch':'Hits generate more gold.',
+  'Precise Gold':'Weakspot hits drop bonus gold.',
+  'Rapid Tentacles':'Spawn tentacles faster.',
+  'Oceanic Explosives':'Tentacle throwables explode.',
+  'Oceanic Supplies':'Tentacles drop ammo and heals.',
+  'Oceanic Acid':'Throwables apply armor shred.',
+  'Oceanic Anchors':'Tentacles root enemies in place.',
+  'Rapid Spirits':'Fill the Spirit gauge faster.',
+  'Barraging Spirits':'Spirit burst fires more projectiles.',
+  'Exploding Spirits':'Spirits detonate on impact.',
+  'Abundant Spirits':'Larger gauge / longer uptime.',
+  'Night’s Minor Blessing':'Core shared-pain power spike.',
+  'Infected Shadows':'Tag spreads to nearby enemies.',
+  'Weakening Shadows':'Tagged enemies take more damage.',
+  'Exposing Shadows':'Bonus damage vs Frozen/Stunned.',
+  'Roaring Winds':'Each Windburst procs twice.',
+  'Eye of the Storm':'More damage near the burst center.',
+  'Whirling Winds':'Bursts pull enemies inward.',
+  'Culling Winds':'Execute low-HP enemies in the burst.',
+  'Rapid Barrier':'Barrier recharges faster.',
+  'Retaliating Barrier':'Reflect heavy damage when hit.',
+  'Panicked Barrier':'Instant barrier at low HP.',
+  'Splattering Brine':'Vials splatter acid over a wider area.',
+  'Detonating Brine':'Vials detonate for burst damage.',
+  'Expanding Brine':'Acid pools grow larger.',
+  'Acidic Brine':'Acid shreds enemy armor.',
+  'Bouncing Brine':'Vials bounce to extra targets.',
+  'Lethal Brine':'Acid deals more damage over time.',
+};
+
+/* ============================================================= STATE */
+const state = {
+  weapon:null, primaryMod:null, secondaryMod:null, ability:null,
+  blessingPrimary:null, blessingSecondary:null, blessingAbility:null,
+};
+let blessingError = null; // {slot, msg}
+// Completed steps collapse to a recap to keep the active step spacious;
+// forceOpen[n] re-expands a completed step for editing.
+const forceOpen = {1:false, 2:false, 3:false};
+function collapsed(n){
+  if(n===1) return panel1Done() && !forceOpen[1];
+  if(n===2) return panel2Done() && !forceOpen[2];
+  return false;
+}
+
+// Player run-completion tracking (persists across "Start over").
+// Defaults: weapons that don't need a run start checked.
+const completed = {};
+DATA.weapons.forEach(w => completed[w.id] = !w.needsCompletion);
+
+const SLOT_KEYS = {primary:'blessingPrimary', secondary:'blessingSecondary', ability:'blessingAbility'};
+const SLOT_LABELS = {primary:'Primary Blessing', secondary:'Secondary Blessing', ability:'Ability Blessing'};
+
+const byId = id => DATA.weapons.find(w=>w.id===id);
+const bless = id => DATA.blessings.find(b=>b.id===id);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slugify = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+
+// Real game icon (img) with emoji fallback if the file is missing/offline.
+function gicon(slug, emoji, size){
+  const s = size||26;
+  return `<span class="iconwrap" style="width:${s}px;height:${s}px;font-size:${Math.round(s*0.78)}px">`+
+    `<img src="icons/${slug}.png" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'">`+
+    `<span class="iconfb" style="display:none">${emoji}</span></span>`;
+}
+const weaponIcon = (w,sz) => gicon(w.id, w.icon, sz);
+const abilityIcon = (a,sz) => gicon(slugify(a), ABILITY_ICONS[a]||'✨', sz);
+const blessIcon = (b,sz) => gicon('blessing-'+b.id, b.icon, sz);
+const blessIconById = (id,sz) => { const b=bless(id); return b?blessIcon(b,sz):''; };
+
+// Proven blessing+gear pairings (DATA.provenPairings) keyed off the current gear.
+function provenForSlot(slot){
+  const out=[];
+  for(const p of (DATA.provenPairings||[])){
+    if(slot==='ability' && p.ability && p.ability===state.ability) out.push(p.blessing);
+    else if((slot==='primary'||slot==='secondary') && p.weapon && p.weapon===state.weapon && p.slots && p.slots.includes(slot)) out.push(p.blessing);
+  }
+  return out;
+}
+// Proven pairings triggered by the current weapon/ability selection (for hints).
+function provenHits(){
+  return (DATA.provenPairings||[]).filter(p =>
+    (p.ability && p.ability===state.ability) || (p.weapon && p.weapon===state.weapon));
+}
+
+/* ============================================================= COMPLETION */
+const panel1Done = () => state.weapon && state.primaryMod && state.secondaryMod && state.ability;
+function selectedBlessings(){ return [state.blessingPrimary, state.blessingSecondary, state.blessingAbility].filter(Boolean); }
+function panel2Done(){
+  const b = selectedBlessings();
+  return b.length===3 && new Set(b).size===3;
+}
+
+/* ============================================================= RENDER */
+let prevP1 = false, prevP2 = false;
+function render(){
+  computeTiers();
+  renderPanel1();
+  renderPanel2();
+  renderPanel3();
+  renderSummary();
+  updateChrome();
+  const d1 = panel1Done(), d2 = panel2Done();
+  if(d1 && !prevP1) reveal('panel-2');
+  if(d2 && !prevP2) reveal('panel-3');
+  prevP1 = d1; prevP2 = d2;
+}
+
+function updateChrome(){
+  const p1=document.getElementById('panel-1'), p2=document.getElementById('panel-2'), p3=document.getElementById('panel-3');
+  const s1=document.getElementById('status-1'), s2=document.getElementById('status-2'), s3=document.getElementById('status-3');
+  const d1=panel1Done(), d2=panel2Done();
+
+  // Panel 1
+  p1.classList.remove('locked');
+  p1.classList.toggle('complete', d1);
+  p1.classList.toggle('active', !d1);
+  s1.className='status ' + (d1?'complete check':'active');
+  s1.innerHTML = d1 ? '<i class="ti ti-circle-check"></i> Complete' : 'Active';
+
+  // Panel 2
+  p2.classList.toggle('locked', !d1);
+  p2.classList.toggle('complete', d1 && d2);
+  p2.classList.toggle('active', d1 && !d2);
+  s2.className='status ' + (!d1?'locked':(d2?'complete check':'active'));
+  s2.innerHTML = !d1 ? '<i class="ti ti-lock"></i> Locked' : (d2 ? '<i class="ti ti-circle-check"></i> Complete' : 'Active');
+
+  // Panel 3
+  p3.classList.toggle('locked', !d2);
+  p3.classList.toggle('active', d2);
+  s3.className='status ' + (!d2?'locked':'active');
+  s3.innerHTML = !d2 ? '<i class="ti ti-lock"></i> Locked' : 'In progress';
+
+  // collapse completed steps to a recap
+  p1.classList.toggle('collapsed', collapsed(1));
+  p2.classList.toggle('collapsed', collapsed(2));
+
+  renderStepper(d1, d2);
+}
+
+function renderStepper(d1, d2){
+  const steps=[
+    {n:1, label:'Weapon', icon:'ti-crosshair', state: collapsed(1)?'done':(d1?'done':'active')},
+    {n:2, label:'Blessings', icon:'ti-droplet', state: !d1?'locked':(collapsed(2)?'done':(d2?'done':'active'))},
+    {n:3, label:'Upgrades', icon:'ti-anchor', state: !d2?'locked':'active'},
+  ];
+  // the genuinely-active (expanded, incomplete) step gets 'active'; recompute
+  const activeN = !d1 ? 1 : (!d2 ? 2 : 3);
+  let h='';
+  steps.forEach((s,i)=>{
+    const st = s.state==='locked' ? 'locked' : (s.n===activeN ? 'active' : 'done');
+    h += `<button class="step ${st}" data-action="goto-step" data-step="${s.n}"${st==='locked'?' disabled':''}>
+      <span class="stepnum">${st==='done'?'<i class="ti ti-check"></i>':s.n}</span>
+      <span class="steplab">${s.label}</span></button>`;
+    if(i<steps.length-1) h += `<span class="stepbar ${steps[i+1].state==='locked'?'':'lit'}"></span>`;
+  });
+  document.getElementById('stepper').innerHTML = h;
+}
+
+/* ---------- Recaps for collapsed steps ---------- */
+function recap1(){
+  const w=byId(state.weapon);
+  return `<div class="recap" data-action="reopen" data-step="1">
+    <div class="recap-items">
+      <span class="recap-i strong">${weaponIcon(w,32)} ${esc(w.name)}</span>
+      <span class="recap-i tag">${esc(state.primaryMod)}</span>
+      <span class="recap-i tag">${esc(state.secondaryMod)}</span>
+      <span class="recap-i strong">${abilityIcon(state.ability,30)} ${esc(state.ability)}</span>
+    </div>
+    <span class="recap-edit"><i class="ti ti-pencil"></i> Edit</span></div>`;
+}
+function recap2(){
+  const items=['primary','secondary','ability'].map(slot=>{
+    const b=bless(state[SLOT_KEYS[slot]]);
+    return `<span class="recap-i strong">${blessIcon(b,28)} ${esc(b.name)}</span>`;
+  }).join('');
+  return `<div class="recap" data-action="reopen" data-step="2">
+    <div class="recap-items">${items}</div>
+    <span class="recap-edit"><i class="ti ti-pencil"></i> Edit</span></div>`;
+}
+
+/* ---------- Panel 1 ---------- */
+function renderPanel1(){
+  if(collapsed(1)){ document.getElementById('body-1').innerHTML = recap1(); return; }
+  const w = state.weapon ? byId(state.weapon) : null;
+  let h = '';
+
+  // Weapon grid
+  h += '<div class="field"><label>Weapon</label><div class="cardgrid">';
+  for(const wp of DATA.weapons){
+    const sel = state.weapon===wp.id ? ' sel':'';
+    const done = !!completed[wp.id];
+    h += `<div class="tilecard wcard${sel}${done?' wdone':''}" data-action="select-weapon" data-id="${wp.id}">
+      <span class="ico">${weaponIcon(wp,52)}</span>
+      <span class="winfo">
+        <span class="nm">${esc(wp.name)}</span>
+        <label class="wcheck"><input type="checkbox" data-action="toggle-complete" data-id="${wp.id}"${done?' checked':''}>
+          ${done?'Run complete':'<span class="needtxt">Mark run complete</span>'}</label>
+      </span>
+    </div>`;
+  }
+  h += '</div></div>';
+
+  if(w){
+    // Primary mods
+    h += `<div class="field"><label>Primary mod</label><div class="pills">`;
+    for(const m of w.primaryMods){
+      h += `<button class="pill${state.primaryMod===m?' sel':''}" data-action="select-primary" data-val="${esc(m)}">${esc(m)}</button>`;
+    }
+    h += '</div></div>';
+    // Secondary mods
+    h += `<div class="field"><label>Secondary mod</label><div class="pills">`;
+    for(const m of w.secondaryMods){
+      h += `<button class="pill${state.secondaryMod===m?' sel':''}" data-action="select-secondary" data-val="${esc(m)}">${esc(m)}</button>`;
+    }
+    h += '</div></div>';
+    // Phase 2 note about per-modification checkboxes
+    h += `<div class="phase2note"><i class="ti ti-checkbox"></i> <span>Phase 2 will add a checkbox to each gun modification above, so you can track exactly which primary and secondary mods you’ve unlocked per weapon.</span></div>`;
+    // Ability
+    h += `<div class="field"><label>Ability</label><div class="cardgrid">`;
+    for(const a of DATA.abilities){
+      h += `<button class="tilecard${state.ability===a?' sel':''}" data-action="select-ability" data-val="${esc(a)}">
+        <span class="ico">${abilityIcon(a,46)}</span><span class="nm">${esc(a)}</span></button>`;
+    }
+    h += '</div></div>';
+    // Combos
+    h += `<div class="combos"><div class="combos-h">Starter combos — click to apply</div>`;
+    w.combos.forEach((c,i)=>{
+      h += `<button class="combo" data-action="apply-combo" data-index="${i}">
+        <div class="ctitle">${esc(c.label)}</div>
+        <div class="cmods"><b>${esc(c.primary)}</b> + <b>${esc(c.secondary)}</b> + <b>${esc(c.ability)}</b></div>
+        <div class="cwhy">${esc(c.why)}</div>
+      </button>`;
+    });
+    h += '</div>';
+    // Proven blessing+gear pairings triggered by current weapon/ability
+    const hits = provenHits();
+    if(hits.length){
+      h += '<div class="proven-hints">';
+      for(const p of hits){
+        const b = bless(p.blessing);
+        const where = p.slots ? p.slots.join(' or ')+' blessing slot' : 'ability blessing slot';
+        h += `<div class="proven-hint"><span class="ph-tag">✓ Proven</span>
+          <div><b>${esc(p.label)}</b> — put <b>${blessIcon(b,20)} ${esc(b.name)}</b> in the ${where} in Panel 2. <span class="ph-why">${esc(p.why)}</span></div></div>`;
+      }
+      h += '</div>';
+    }
+  }
+  document.getElementById('body-1').innerHTML = h;
+}
+
+/* ---------- Panel 2 ---------- */
+function renderPanel2(){
+  if(!panel1Done()){ document.getElementById('body-2').innerHTML=''; return; }
+  if(collapsed(2)){ document.getElementById('body-2').innerHTML = recap2(); return; }
+  const w = byId(state.weapon);
+  let h = '<button class="editlink" data-action="edit" data-panel="1"><i class="ti ti-arrow-left"></i> Edit weapon setup</button>';
+  h += '<div class="tier-note"><i class="ti ti-chart-arrows-vertical"></i> Tier badges blend community consensus with your group’s logged runs (50/50). Hover a badge for the breakdown; see the full board in the Run Log.</div>';
+  h += '<div class="slots">';
+
+  for(const slot of ['primary','secondary','ability']){
+    const key = SLOT_KEYS[slot];
+    const cur = state[key];
+    const recs = w.slotRecs[slot] || [];
+    const proven = provenForSlot(slot);
+    const picked = cur ? bless(cur) : null;
+    h += `<div class="slot"><div class="slabel">${SLOT_LABELS[slot]}${picked?`<span class="pick">${blessIcon(picked,22)} ${esc(picked.name)}</span>`:''}</div>`;
+    h += '<div class="blessgrid">';
+    // proven first, then recommended, then rest
+    const rank = id => proven.includes(id) ? -1 : (recs.indexOf(id)===-1 ? 99 : recs.indexOf(id));
+    const ordered = [...DATA.blessings].sort((a,b)=> rank(a.id)-rank(b.id));
+    for(const b of ordered){
+      const isSel = cur===b.id;
+      const isProven = proven.includes(b.id);
+      const isRec = isProven || recs.includes(b.id);
+      // disabled if used in another slot
+      const usedElsewhere = !isSel && Object.entries(SLOT_KEYS).some(([s,k])=> s!==slot && state[k]===b.id);
+      const cls = ['bcard']; if(isSel)cls.push('sel'); if(isRec&&!isSel)cls.push('rec'); if(isProven)cls.push('proven'); if(usedElsewhere)cls.push('disabled');
+      const label = isProven ? '<div class="reclabel proven">✓ Proven combo</div>' : (isRec ? '<div class="reclabel">★ Recommended</div>' : '');
+      h += `<button class="${cls.join(' ')}" data-action="select-blessing" data-slot="${slot}" data-id="${b.id}">
+        ${label}
+        <div class="bhead"><span class="bico">${blessIcon(b,34)}</span><span class="bname">${esc(b.name)}</span><span class="tier ${tierOf(b.id)}" title="${esc(tierTip(b.id))}">${tierOf(b.id)}</span></div>
+        <div class="bdesc">${esc(b.description)}</div>
+      </button>`;
+    }
+    h += '</div>';
+    if(blessingError && blessingError.slot===slot){
+      h += `<div class="note err">${esc(blessingError.msg)}</div>`;
+    }
+    h += '</div>';
+  }
+  h += '</div>';
+
+  // Synergy note + crystal warning (when all three different)
+  if(panel2Done()){
+    const note = synergyNote();
+    h += `<div class="note synergy"><b>Synergy:</b> ${esc(note)}</div>`;
+    const anyCrystal = selectedBlessings().some(id => bless(id).crystalSafe);
+    if(!anyCrystal){
+      h += `<div class="note warn">⚠️ None of your blessings damage Un’glu crystals. Consider Anchor or Smiting Spear if you reach the final boss.</div>`;
+    }
+  }
+  document.getElementById('body-2').innerHTML = h;
+}
+
+function synergyNote(){
+  const p=state.blessingPrimary, s=state.blessingSecondary, a=state.blessingAbility;
+  const exact = DATA.synergies.find(x=>x.primary===p && x.secondary===s && x.ability===a);
+  if(exact) return `${exact.label} (${exact.tier}-tier${exact.confirmed?', confirmed':''}). ${exact.why}`;
+  // loose match: same set of blessings in any order
+  const set = new Set([p,s,a]);
+  const loose = DATA.synergies.find(x=> set.has(x.primary)&&set.has(x.secondary)&&set.has(x.ability) && new Set([x.primary,x.secondary,x.ability]).size===3 && [x.primary,x.secondary,x.ability].every(id=>set.has(id)));
+  if(loose) return `Close to ${loose.label} (${loose.tier}-tier). ${loose.why} (Try matching the exact slot order for the confirmed version.)`;
+  return 'These three are a solid balanced setup — no confirmed triad on record, but the aspects cover damage, control, and utility.';
+}
+
+/* ---------- Panel 3 ---------- */
+function rankUpgrades(b){
+  const out = [];
+  for(const u of b.priorityUpgrades) out.push({name:u, pr:'first'});
+  const rest = b.upgrades.filter(u=>!b.priorityUpgrades.includes(u));
+  rest.forEach((u,i)=>{
+    out.push({name:u, pr: (i===rest.length-1 && rest.length>1) ? 'skip' : 'maybe'});
+  });
+  return out;
+}
+function prLabel(pr){ return pr==='first'?'Take first':pr==='maybe'?'Take if available':'Skip for now'; }
+
+function renderPanel3(){
+  if(!panel2Done()){ document.getElementById('body-3').innerHTML=''; return; }
+  let h = '<button class="editlink" data-action="edit" data-panel="2"><i class="ti ti-arrow-left"></i> Edit blessing slots</button>';
+  h += '<div class="upcols">';
+  for(const slot of ['primary','secondary','ability']){
+    const b = bless(state[SLOT_KEYS[slot]]);
+    h += `<div class="upcol">
+      <div class="upcol-h"><span class="bico">${blessIcon(b,44)}</span><div><div class="slotkind">${SLOT_LABELS[slot]}</div><div class="bname">${esc(b.name)}</div></div></div>
+      <div class="milestone">Your <b>3rd</b> ${esc(b.name)} blessing unlocks the <b>Minor Blessing</b> — a major power spike. Your <b>6th</b> unlocks the <b>Major Blessing</b>.</div>`;
+    for(const u of rankUpgrades(b)){
+      h += `<div class="upg">
+        <div class="un">${esc(u.name)}<span class="pbadge ${u.pr}">${prLabel(u.pr)}</span></div>
+        <div class="ud">${esc(UPGRADE_INFO[u.name]||'')}</div>
+      </div>`;
+    }
+    h += `<div class="charm"><i class="ti ti-sparkles"></i> ${esc(b.charm)}</div>`;
+    h += '</div>';
+  }
+  h += '</div>';
+  document.getElementById('body-3').innerHTML = h;
+}
+
+/* ---------- Summary ---------- */
+function renderSummary(){
+  const wrap = document.getElementById('summary-wrap');
+  if(!panel2Done()){ wrap.innerHTML=''; return; }
+  const w = byId(state.weapon);
+  let h = `<div class="summary fade"><h3><i class="ti ti-player-play"></i> Start your run</h3>
+    <div class="ssub">Your full loadout at a glance</div>
+    <div class="srow">
+      <div class="sitem"><span class="k">Weapon</span><span class="v">${weaponIcon(w,28)} ${esc(w.name)}</span></div>
+      <div class="sitem"><span class="k">Primary mod</span><span class="v">${esc(state.primaryMod)}</span></div>
+      <div class="sitem"><span class="k">Secondary mod</span><span class="v">${esc(state.secondaryMod)}</span></div>
+      <div class="sitem"><span class="k">Ability</span><span class="v">${abilityIcon(state.ability,28)} ${esc(state.ability)}</span></div>
+    </div>
+    <div class="sgrid">`;
+  for(const slot of ['primary','secondary','ability']){
+    const b = bless(state[SLOT_KEYS[slot]]);
+    const top = b.priorityUpgrades.map(esc).join(', ');
+    h += `<div class="sbless">
+      <div class="sb-h">${blessIcon(b,24)} ${esc(b.name)} <span class="tier ${tierOf(b.id)}" title="${esc(tierTip(b.id))}">${tierOf(b.id)}</span></div>
+      <div class="sb-up"><span style="color:var(--muted)">${SLOT_LABELS[slot]}</span><br>Take first: <b>${top}</b></div>
+    </div>`;
+  }
+  h += '</div></div>';
+  wrap.innerHTML = h;
+}
+
+/* ============================================================= RUN LOG */
+const RUNS_KEY='abyssus_runs_v1', SEED_FLAG='abyssus_seeded_v1', SEED_IDS_KEY='abyssus_seedids_v1';
+let runs=[]; let editingId=null; let curView='advisor';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const nf=n=>(n==null||n==='')?'—':Number(n).toLocaleString();
+const abbr=n=>{n=Number(n)||0; if(n>=1e9)return (n/1e9).toFixed(2)+'B'; if(n>=1e6)return (n/1e6).toFixed(2)+'M'; if(n>=1e3)return (n/1e3).toFixed(1)+'k'; return ''+n;};
+
+// Seed data transcribed from the logbook screenshots. Loadout fields are null
+// because the logbook screen does not show weapon/mods/ability/slot — players
+// can fill those by editing a run. Aspect % breakdowns come straight from the shots.
+function seedRun(o){ return Object.assign({weapon:null,primaryMod:null,secondaryMod:null,ability:null,blessingPrimary:null,blessingSecondary:null,blessingAbility:null,deaths:0,notes:null,sources:null}, o); }
+const SEED_BASE=1719500000000;
+const SEED_RUNS=[
+  seedRun({id:'seed-bk1', player:'beezkneez', expedition:18, status:'Successful', damageTotal:2414659, damageTaken:2168, enemiesKilled:191, gold:315, accuracy:63, weakspot:null, time:'44m 44s', aspects:{defense:45,blood:10,fortune:8}, sources:{ability:17,secondary:10,primary:10,melee:0}, createdAt:SEED_BASE+0}),
+  seedRun({id:'seed-bk2', player:'beezkneez', expedition:18, status:'Successful', damageTotal:11407406, damageTaken:2231, enemiesKilled:null, gold:364, accuracy:68, weakspot:null, time:'44m 44s', aspects:{lightning:51,blood:32,spirit:3}, sources:{primary:8,ability:2,secondary:0}, createdAt:SEED_BASE+1}),
+  seedRun({id:'seed-bk3', player:'beezkneez', expedition:17, status:'Successful', damageTotal:543086, damageTaken:1506, enemiesKilled:168, gold:546, accuracy:58, weakspot:16, time:'36m 47s', aspects:{blood:11,frost:2,shadow:0}, sources:{ability:47,primary:24,secondary:15,charms:1,melee:0}, createdAt:SEED_BASE+2}),
+  seedRun({id:'seed-bk4', player:'beezkneez', expedition:16, status:'Successful', damageTotal:5494174, damageTaken:3181, enemiesKilled:283, gold:633, accuracy:64, weakspot:22, time:'1h 15m 48s', aspects:{blood:51,fortune:8,ocean:3}, sources:{ability:15,secondary:12,primary:10,melee:0}, createdAt:SEED_BASE+3}),
+  seedRun({id:'seed-br1', player:'biskyRiz', expedition:13, status:'Successful', damageTotal:7426260, damageTaken:2416, enemiesKilled:290, gold:395, accuracy:54, weakspot:48, time:'1h 2m 15s', aspects:{lightning:80,ocean:7}, sources:{primary:10,ability:4,secondary:0}, createdAt:SEED_BASE+4}),
+  seedRun({id:'seed-br2', player:'biskyRiz', expedition:14, status:'Successful', damageTotal:2407025, damageTaken:1437, enemiesKilled:173, gold:541, accuracy:47, weakspot:52, time:'1h 17m 19s', aspects:{lightning:59,defense:13,blood:1}, sources:{primary:19,ability:8,secondary:0}, createdAt:SEED_BASE+5}),
+  seedRun({id:'seed-br3', player:'biskyRiz', expedition:17, status:'Successful', damageTotal:11409684, damageTaken:2231, enemiesKilled:234, gold:364, accuracy:65, weakspot:31, time:'44m 44s', aspects:{lightning:56,blood:32,spirit:3}, sources:{primary:8,ability:2,secondary:0}, createdAt:SEED_BASE+6}),
+  seedRun({id:'seed-br4', player:'biskyRiz', expedition:11, status:'Successful', damageTotal:2772808, damageTaken:1196, enemiesKilled:273, gold:213, accuracy:82, weakspot:40, time:'1h 2m 24s', aspects:{ocean:55}, sources:{primary:34,ability:11,secondary:0}, createdAt:SEED_BASE+7}),
+  seedRun({id:'seed-bloodanchor', player:'BeezKneez77', expedition:null, status:'Successful', ability:'Anchor', blessingAbility:'blood', damageTotal:28353116, damageTaken:3649, enemiesKilled:158, deaths:1, gold:301, accuracy:73, weakspot:26, time:'48m 6s', notes:'Blood + Anchor — beat Highpriest Un’glu', aspects:{blood:80,ocean:11,shadow:2}, sources:{ability:4,secondary:2,primary:1}, createdAt:SEED_BASE+8}),
+];
+
+function loadRuns(){ try{ return JSON.parse(localStorage.getItem(RUNS_KEY))||[]; }catch(e){ return []; } }
+function saveRuns(){ try{ localStorage.setItem(RUNS_KEY, JSON.stringify(runs)); }catch(e){} }
+function initRuns(){
+  let firstEver=true, seenIds=[];
+  try{ firstEver = !localStorage.getItem(SEED_FLAG); }catch(e){}
+  try{ seenIds = JSON.parse(localStorage.getItem(SEED_IDS_KEY))||[]; }catch(e){}
+  runs = firstEver ? [] : loadRuns();
+  // Add any seed run we've never introduced before (so new curated runs appear),
+  // but never re-add one the player has since deleted.
+  const seen = new Set(seenIds), existing = new Set(runs.map(r=>r.id));
+  let changed=false;
+  for(const s of SEED_RUNS){
+    if(!seen.has(s.id) && !existing.has(s.id)){ runs.push({...s}); changed=true; }
+    seen.add(s.id);
+  }
+  try{ localStorage.setItem(SEED_FLAG,'1'); }catch(e){}
+  try{ localStorage.setItem(SEED_IDS_KEY, JSON.stringify([...seen])); }catch(e){}
+  if(changed || firstEver) saveRuns();
+}
+
+/* ---------- Blended tiers: community consensus ⊕ your group's runs (50/50) ----------
+   Community baseline = blessing.tier (online consensus from cited sources).
+   Group score = usage (how often your runs use it) + performance (avg damage share + win rate),
+   normalised across your logged runs. Blessings with no logged runs stay at the community tier. */
+const TP={S:4,A:3,B:2,C:1};
+const toTier = p => p>=3.5?'S' : p>=2.5?'A' : p>=1.5?'B' : 'C';
+let TIERS = {};
+function computeTiers(){
+  const total = runs.length;
+  const st={}; DATA.blessings.forEach(b=>st[b.id]={appear:0,wins:0,shares:[]});
+  for(const r of runs){
+    const ids=new Set([r.blessingPrimary,r.blessingSecondary,r.blessingAbility].filter(Boolean));
+    if(r.aspects) Object.keys(r.aspects).forEach(k=>ids.add(k));
+    ids.forEach(id=>{ if(st[id]){ st[id].appear++; if(r.status==='Successful') st[id].wins++; } });
+    if(r.aspects) Object.entries(r.aspects).forEach(([id,p])=>{ if(st[id]) st[id].shares.push(Number(p)); });
+  }
+  let maxUsage=0, maxDmg=0; const raw={};
+  for(const b of DATA.blessings){
+    const s=st[b.id];
+    const usageRate = total? s.appear/total : 0;
+    const avgDmg = s.shares.length? s.shares.reduce((a,c)=>a+c,0)/s.shares.length : 0;
+    const winRate = s.appear? s.wins/s.appear : 0;
+    raw[b.id]={appear:s.appear, usageRate, avgDmg, winRate};
+    if(usageRate>maxUsage)maxUsage=usageRate;
+    if(avgDmg>maxDmg)maxDmg=avgDmg;
+  }
+  TIERS={};
+  for(const b of DATA.blessings){
+    const o=raw[b.id], commPts=TP[b.tier]||2;
+    if(!o.appear){ TIERS[b.id]={tier:b.tier, comm:b.tier, group:null, appear:0, blended:false}; continue; }
+    const normUsage = maxUsage? o.usageRate/maxUsage : 0;
+    const normDmg = maxDmg? o.avgDmg/maxDmg : 0;
+    const perf = 0.6*normDmg + 0.4*o.winRate;          // performance = damage + wins
+    const strength = 0.5*normUsage + 0.5*perf;          // usage + performance
+    const groupPts = 1 + 3*strength;                    // 0..1 -> 1..4 (C..S)
+    const blendedPts = 0.5*commPts + 0.5*groupPts;      // even 50/50 blend
+    TIERS[b.id]={tier:toTier(blendedPts), comm:b.tier, group:toTier(groupPts),
+      appear:o.appear, dmg:Math.round(o.avgDmg), win:Math.round(o.winRate*100), blended:true};
+  }
+}
+function tierOf(id){ return (TIERS[id]&&TIERS[id].tier) || (bless(id)?bless(id).tier:'B'); }
+function tierTip(id){
+  const t=TIERS[id]; if(!t) return '';
+  return t.blended
+    ? `Community ${t.comm} · Your group ${t.group} (${t.appear} run${t.appear>1?'s':''}, ${t.dmg}% avg dmg, ${t.win}% win) → Blended ${t.tier}`
+    : `Community ${t.comm} · no group runs logged yet`;
+}
+
+function setView(v){
+  curView=v;
+  document.getElementById('view-advisor').classList.toggle('hidden', v!=='advisor');
+  document.getElementById('view-runlog').classList.toggle('hidden', v!=='runlog');
+  document.querySelector('header').classList.toggle('runlog', v==='runlog');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
+  if(v==='runlog') renderRunlog();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ---- option builders ----
+function optList(items, selected, blank){
+  let h = blank!=null ? `<option value="">${esc(blank)}</option>` : '';
+  for(const it of items) h += `<option value="${esc(it.val)}"${String(selected)===String(it.val)?' selected':''}>${esc(it.lab)}</option>`;
+  return h;
+}
+const weaponSel  = sel => optList(DATA.weapons.map(w=>({val:w.id,lab:w.name})), sel, '— weapon —');
+const abilitySel = sel => optList(DATA.abilities.map(a=>({val:a,lab:a})), sel, '— ability —');
+const blessSel   = sel => optList(DATA.blessings.map(b=>({val:b.id,lab:b.name})), sel, '—');
+function modSel(weaponId, kind, sel){
+  const w = weaponId ? byId(weaponId) : null;
+  const arr = w ? (kind==='primary'?w.primaryMods:w.secondaryMods) : [];
+  return optList(arr.map(m=>({val:m,lab:m})), sel, '—');
+}
+const ff = (label, inner, cls) => `<div class="ff ${cls||''}"><label>${label}</label>${inner}</div>`;
+
+function renderRunlog(){
+  computeTiers();
+  const ed = editingId ? runs.find(r=>r.id===editingId) : null;
+  const g = k => ed ? (ed[k]==null?'':ed[k]) : '';
+  const wId = ed ? (ed.weapon||'') : '';
+  let h = `<div class="rl-head"><h2>Run Log<small>Log end-of-run data; it accumulates to show what works</small></h2>
+    <div class="rl-actions">
+      <button class="btn" data-action="rl-export"><i class="ti ti-download"></i> Export</button>
+      <button class="btn" data-action="rl-import"><i class="ti ti-upload"></i> Import</button>
+      <input type="file" id="rl-file" accept="application/json" class="hidden">
+    </div></div>`;
+  h += '<div class="rl-grid">';
+
+  // ---- form ----
+  h += `<div class="card" id="logcard"><h3><i class="ti ti-plus"></i> ${ed?'Edit run':'Log a run'}</h3><div class="formgrid">`;
+  h += ff('Player', `<input id="f-player" value="${esc(g('player'))}">`);
+  h += ff('Expedition #', `<input id="f-exp" type="number" value="${esc(g('expedition'))}">`);
+  h += ff('Status', `<select id="f-status">${optList([{val:'Successful',lab:'Successful'},{val:'Failed',lab:'Failed'}], ed?ed.status:'Successful', null)}</select>`);
+  h += ff('Weapon', `<select id="f-weapon">${weaponSel(wId)}</select>`);
+  h += ff('Primary mod', `<select id="f-primary">${modSel(wId,'primary',g('primaryMod'))}</select>`);
+  h += ff('Secondary mod', `<select id="f-secondary">${modSel(wId,'secondary',g('secondaryMod'))}</select>`);
+  h += ff('Ability', `<select id="f-ability">${abilitySel(g('ability'))}</select>`, 'fg-full');
+  h += ff('Primary blessing', `<select id="f-bp">${blessSel(g('blessingPrimary'))}</select>`);
+  h += ff('Secondary blessing', `<select id="f-bs">${blessSel(g('blessingSecondary'))}</select>`);
+  h += ff('Ability blessing', `<select id="f-ba">${blessSel(g('blessingAbility'))}</select>`, 'fg-full');
+  h += ff('Damage dealt', `<input id="f-dmg" type="number" value="${esc(g('damageTotal'))}">`);
+  h += ff('Damage taken', `<input id="f-taken" type="number" value="${esc(g('damageTaken'))}">`);
+  h += ff('Enemies killed', `<input id="f-killed" type="number" value="${esc(g('enemiesKilled'))}">`);
+  h += ff('Deaths', `<input id="f-deaths" type="number" value="${esc(g('deaths'))}">`);
+  h += ff('Gold', `<input id="f-gold" type="number" value="${esc(g('gold'))}">`);
+  h += ff('Time', `<input id="f-time" placeholder="e.g. 44m 44s" value="${esc(g('time'))}">`);
+  h += ff('Accuracy %', `<input id="f-acc" type="number" value="${esc(g('accuracy'))}">`);
+  h += ff('Weakspot %', `<input id="f-weak" type="number" value="${esc(g('weakspot'))}">`);
+  h += ff('Notes', `<input id="f-notes" value="${esc(g('notes'))}">`, 'fg-full');
+  h += '</div>';
+  h += `<div class="form-foot"><button class="btn primary" data-action="log-save">${ed?'Update run':'Save run'}</button>`;
+  if(ed) h += `<button class="btn" data-action="log-cancel">Cancel</button>`;
+  h += `<span class="hint">Saved in this browser only — Export to share with friends.</span></div></div>`;
+
+  // ---- insights ----
+  h += '<div class="card">'+insightsHTML()+'</div>';
+  h += '</div>'; // rl-grid
+
+  // ---- runs list ----
+  h += `<div class="card" style="margin-top:16px"><h3><i class="ti ti-list"></i> Logged runs (${runs.length})</h3>${runsListHTML()}</div>`;
+
+  document.getElementById('view-runlog').innerHTML = h;
+}
+
+function insightsHTML(){
+  if(!runs.length) return '<h3><i class="ti ti-chart-bar"></i> Insights</h3><div class="emptynote">Log a run to start building insights.</div>';
+  const total=runs.length;
+  const wins=runs.filter(r=>r.status==='Successful').length;
+  const dmgRuns=runs.filter(r=>Number(r.damageTotal)>0);
+  const avg=dmgRuns.length? dmgRuns.reduce((s,r)=>s+Number(r.damageTotal),0)/dmgRuns.length : 0;
+  const best=runs.reduce((m,r)=>Math.max(m, Number(r.damageTotal)||0), 0);
+  let h='<h3><i class="ti ti-chart-bar"></i> Insights</h3>';
+  h+=`<div class="kpis">
+    <div class="kpi"><div class="kv">${total}</div><div class="kl">Runs</div></div>
+    <div class="kpi"><div class="kv">${Math.round(wins/total*100)}%</div><div class="kl">Win rate</div></div>
+    <div class="kpi"><div class="kv">${abbr(avg)}</div><div class="kl">Avg damage</div></div>
+    <div class="kpi"><div class="kv">${abbr(best)}</div><div class="kl">Best run</div></div>
+  </div>`;
+  // blessing leaderboard (loadout slots + aspect breakdown)
+  const stat={}; DATA.blessings.forEach(b=>stat[b.id]={n:0,shares:[]});
+  for(const r of runs){
+    const seen=new Set([r.blessingPrimary,r.blessingSecondary,r.blessingAbility].filter(Boolean));
+    if(r.aspects) Object.keys(r.aspects).forEach(k=>seen.add(k));
+    seen.forEach(id=>{ if(stat[id]) stat[id].n++; });
+    if(r.aspects) Object.entries(r.aspects).forEach(([id,p])=>{ if(stat[id]) stat[id].shares.push(Number(p)); });
+  }
+  const rows=DATA.blessings.map(b=>{const s=stat[b.id]; const av=s.shares.length?Math.round(s.shares.reduce((a,c)=>a+c,0)/s.shares.length):null; return {b,n:s.n,av};})
+    .filter(r=>r.n>0).sort((a,b)=> b.n-a.n || (b.av||0)-(a.av||0));
+  const maxN=Math.max(...rows.map(r=>r.n),1);
+  h+='<h4>Blessing aspects — appearances &amp; avg damage share</h4>';
+  for(const r of rows){
+    h+=`<div class="bar"><span class="blab">${blessIcon(r.b,22)} ${esc(r.b.name)}</span>
+      <span class="btrack"><span class="bfill" style="width:${Math.round(r.n/maxN*100)}%"></span></span>
+      <span class="bval">${r.n} run${r.n>1?'s':''}${r.av!=null?' · '+r.av+'%':''}</span></div>`;
+  }
+  // by weapon
+  const wstat={};
+  for(const r of runs){ if(!r.weapon)continue; const s=(wstat[r.weapon]=wstat[r.weapon]||{n:0,wins:0,dmg:[]}); s.n++; if(r.status==='Successful')s.wins++; if(Number(r.damageTotal))s.dmg.push(Number(r.damageTotal)); }
+  const wrows=Object.entries(wstat).map(([id,s])=>({w:byId(id),s})).filter(r=>r.w);
+  h+='<h4>By weapon</h4>';
+  if(!wrows.length){ h+='<div class="emptynote">Edit a run below to add its weapon/loadout, and weapon comparisons appear here.</div>'; }
+  else{
+    const avgOf=s=> s.dmg.length? s.dmg.reduce((a,c)=>a+c,0)/s.dmg.length : 0;
+    const maxD=Math.max(...wrows.map(r=>avgOf(r.s)),1);
+    for(const r of wrows){
+      const a=avgOf(r.s);
+      h+=`<div class="bar"><span class="blab">${weaponIcon(r.w,22)} ${esc(r.w.name)}</span>
+        <span class="btrack"><span class="bfill" style="width:${Math.round(a/maxD*100)}%"></span></span>
+        <span class="bval">${r.s.n}r · ${Math.round(r.s.wins/r.s.n*100)}% · ${abbr(a)}</span></div>`;
+    }
+  }
+  // blended tier board
+  h+='<h4>Tier ratings — community ⊕ your group (50/50)</h4>';
+  h+='<div class="tierboard-head"><span>Aspect</span><span>Online · Group · Blended</span></div>';
+  const board=DATA.blessings.map(b=>({b, t:TIERS[b.id]})).filter(x=>x.t)
+    .sort((a,b)=> (TP[b.t.tier]||0)-(TP[a.t.tier]||0) || (b.t.appear||0)-(a.t.appear||0));
+  for(const {b,t} of board){
+    const g = t.blended ? `<span class="tier ${t.group}" title="Your group: ${t.appear} run(s), ${t.dmg}% avg dmg, ${t.win}% win">${t.group}</span>`
+                        : '<span class="tier-none" title="No logged runs yet">—</span>';
+    h+=`<div class="tierrow">
+      <span class="tr-name">${blessIcon(b,22)} ${esc(b.name)}</span>
+      <span class="tr-badges"><span class="tier ${t.comm}" title="Community consensus">${t.comm}</span><span class="tr-sep">·</span>${g}<i class="ti ti-arrow-right"></i><span class="tier ${t.tier}" title="Blended rating">${t.tier}</span></span>
+    </div>`;
+  }
+  return h;
+}
+
+function runsListHTML(){
+  if(!runs.length) return '<div class="emptynote">No runs yet.</div>';
+  const sorted=[...runs].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  let h='';
+  for(const r of sorted){
+    const w=r.weapon?byId(r.weapon):null;
+    const blessTags=[r.blessingPrimary,r.blessingSecondary,r.blessingAbility].filter(Boolean).map(id=>blessIconById(id,20)).join('');
+    const topAspect=r.aspects? Object.entries(r.aspects).sort((a,b)=>b[1]-a[1])[0] : null;
+    const win=r.status==='Successful';
+    h+=`<div class="runrow" data-action="run-edit" data-id="${r.id}">
+      <div class="rr-main">
+        <div class="rr-t"><span class="pill-status ${win?'win':'loss'}">${win?'Win':'Loss'}</span>
+          ${w?weaponIcon(w,22)+' '+esc(w.name):'<span class="tag">no loadout</span>'}
+          ${r.ability?abilityIcon(r.ability,22):''}
+          ${blessTags?'<span>'+blessTags+'</span>':''}
+          ${r.player?'<span class="tag">'+esc(r.player)+'</span>':''}
+        </div>
+        <div class="rr-s">${r.expedition?'Exp #'+esc(r.expedition)+' · ':''}${r.time?esc(r.time)+' · ':''}${r.enemiesKilled?nf(r.enemiesKilled)+' kills':''}${topAspect&&bless(topAspect[0])?' · Top: '+esc(bless(topAspect[0]).name)+' '+topAspect[1]+'%':''}</div>
+      </div>
+      <div class="rr-dmg">${abbr(r.damageTotal)}<small>damage</small></div>
+      <button class="rr-del" data-action="run-del" data-id="${r.id}" title="Delete run">&times;</button>
+    </div>`;
+  }
+  return h;
+}
+
+function saveLogForm(){
+  const v=id=>{const el=document.getElementById(id); return el?el.value.trim():'';};
+  const num=id=>{const x=v(id); return x===''?null:Number(x);};
+  const prev = editingId ? runs.find(r=>r.id===editingId) : null;
+  const run={
+    id: editingId||uid(),
+    player:v('f-player')||null, expedition:num('f-exp'), status:v('f-status')||'Successful',
+    weapon:v('f-weapon')||null, primaryMod:v('f-primary')||null, secondaryMod:v('f-secondary')||null, ability:v('f-ability')||null,
+    blessingPrimary:v('f-bp')||null, blessingSecondary:v('f-bs')||null, blessingAbility:v('f-ba')||null,
+    damageTotal:num('f-dmg'), damageTaken:num('f-taken'), enemiesKilled:num('f-killed'), deaths:num('f-deaths'),
+    gold:num('f-gold'), accuracy:num('f-acc'), weakspot:num('f-weak'), time:v('f-time')||null, notes:v('f-notes')||null,
+    aspects: prev?prev.aspects:null, sources: prev?prev.sources:null,
+    createdAt: prev?prev.createdAt:Date.now(),
+  };
+  if(editingId){ runs[runs.findIndex(r=>r.id===editingId)]=run; editingId=null; }
+  else runs.unshift(run);
+  saveRuns(); renderRunlog(); window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function exportRuns(){
+  const blob=new Blob([JSON.stringify(runs,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='abyssus-runs.json'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function importRuns(file){
+  if(!file) return;
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const data=JSON.parse(fr.result);
+      if(!Array.isArray(data)){ alert('Invalid file: expected a JSON array of runs.'); return; }
+      const ids=new Set(runs.map(r=>r.id)); let added=0;
+      for(const r of data){
+        if(!r || typeof r!=='object') continue;
+        if(!r.id){ r.id=uid(); }
+        if(!ids.has(r.id)){ runs.push(r); ids.add(r.id); added++; }
+      }
+      saveRuns(); renderRunlog();
+      alert('Imported '+added+' run'+(added===1?'':'s')+'.');
+    }catch(e){ alert('Could not parse file: '+e.message); }
+  };
+  fr.readAsText(file);
+}
+
+/* ============================================================= EVENTS */
+function setBlessing(slot, id){
+  const key = SLOT_KEYS[slot];
+  if(state[key]===id){ state[key]=null; blessingError=null; render(); return; }
+  // duplicate check
+  const dup = Object.entries(SLOT_KEYS).some(([s,k])=> s!==slot && state[k]===id);
+  if(dup){ blessingError={slot, msg:'Each blessing can only go in one slot.'}; render(); return; }
+  state[key]=id; blessingError=null;
+  render();
+}
+
+function reveal(panelId){
+  const el = document.getElementById(panelId);
+  const body = el.querySelector('.panel-body');
+  if(body) body.classList.add('fade');
+  setTimeout(()=>{ el.scrollIntoView({behavior:'smooth', block:'start'}); }, 60);
+}
+function scrollToPanel(n){ setTimeout(()=>{ const el=document.getElementById('panel-'+n); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50); }
+
+document.addEventListener('click', e=>{
+  // Completion checkbox is handled via 'change'; never let it select the weapon.
+  if(e.target.closest('.wcheck')) return;
+  const t = e.target.closest('[data-action]');
+  if(!t) return;
+  const act = t.dataset.action;
+
+  if(act==='select-weapon'){
+    const id = t.dataset.id;
+    if(state.weapon!==id){
+      state.weapon=id; state.primaryMod=null; state.secondaryMod=null; state.ability=null;
+    }
+    render();
+  }
+  else if(act==='select-primary'){ state.primaryMod=t.dataset.val; render(); }
+  else if(act==='select-secondary'){ state.secondaryMod=t.dataset.val; render(); }
+  else if(act==='select-ability'){ state.ability=t.dataset.val; render(); }
+  else if(act==='apply-combo'){
+    const w=byId(state.weapon); const c=w.combos[+t.dataset.index];
+    state.primaryMod=c.primary; state.secondaryMod=c.secondary; state.ability=c.ability;
+    render();
+  }
+  else if(act==='select-blessing'){
+    if(t.classList.contains('disabled')){ blessingError={slot:t.dataset.slot, msg:'Each blessing can only go in one slot.'}; render(); return; }
+    setBlessing(t.dataset.slot, t.dataset.id);
+  }
+  else if(act==='edit'){
+    const n=+t.dataset.panel; forceOpen[n]=true; render(); scrollToPanel(n);
+  }
+  else if(act==='toggle-panel'){
+    const n=+t.dataset.step;
+    if((n===1&&panel1Done())||(n===2&&panel2Done())){ forceOpen[n]=!forceOpen[n]; render(); if(forceOpen[n]) scrollToPanel(n); }
+  }
+  else if(act==='reopen'){
+    const n=+t.dataset.step; forceOpen[n]=true; render(); scrollToPanel(n);
+  }
+  else if(act==='goto-step'){
+    const n=+t.dataset.step; if(collapsed(n)) forceOpen[n]=true; render(); scrollToPanel(n);
+  }
+  else if(act==='reset'){
+    Object.keys(state).forEach(k=> state[k]=null);
+    blessingError=null; prevP1=false; prevP2=false;
+    forceOpen[1]=forceOpen[2]=forceOpen[3]=false; render();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  // ---- Run Log ----
+  else if(act==='view'){ setView(t.dataset.view); }
+  else if(act==='log-save'){ saveLogForm(); }
+  else if(act==='log-cancel'){ editingId=null; renderRunlog(); }
+  else if(act==='run-edit'){ editingId=t.dataset.id; renderRunlog(); window.scrollTo({top:0,behavior:'smooth'}); }
+  else if(act==='run-del'){
+    if(confirm('Delete this run? This cannot be undone.')){
+      runs=runs.filter(r=>r.id!==t.dataset.id);
+      if(editingId===t.dataset.id) editingId=null;
+      saveRuns(); renderRunlog();
+    }
+  }
+  else if(act==='rl-export'){ exportRuns(); }
+  else if(act==='rl-import'){ const f=document.getElementById('rl-file'); if(f) f.click(); }
+});
+
+// Run-completion toggle (persists across "Start over") + run-log form reactions.
+document.addEventListener('change', e=>{
+  const t = e.target.closest('input[data-action="toggle-complete"]');
+  if(t){ completed[t.dataset.id] = t.checked; render(); return; }
+  if(e.target.id==='f-weapon'){
+    const wid=e.target.value;
+    const p=document.getElementById('f-primary'), s=document.getElementById('f-secondary');
+    if(p) p.innerHTML=modSel(wid,'primary','');
+    if(s) s.innerHTML=modSel(wid,'secondary','');
+    return;
+  }
+  if(e.target.id==='rl-file'){ importRuns(e.target.files[0]); e.target.value=''; return; }
+});
+
+/* ============================================================= INIT */
+initRuns();
+render();
+</script>
+</body>
+</html>
