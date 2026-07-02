@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Abyssus Build Advisor</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%230a1519'/><g fill='none' stroke='%23c8a24e' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='4.6' r='1.7'/><path d='M12 6.3V20'/><path d='M8.5 9.2h7'/><path d='M4.8 12.4a7.2 7.2 0 0 0 14.4 0'/></g></svg>">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
   :root{
@@ -36,12 +37,16 @@
   header h1{font-family:var(--serif); font-size:24px; font-weight:600; letter-spacing:.3px; color:#f1ece0}
   header h1::before{content:"\2693"; color:var(--brass); margin-right:8px; font-size:20px}
   header h1 .sub{display:block; font-family:-apple-system,'Segoe UI',sans-serif; font-size:12px; color:var(--muted); font-weight:400; letter-spacing:.3px; margin-left:26px}
+  header h1 .sub .toolver{color:var(--brass); font-weight:600}
+  /* nav + reset grouped so the nav sits in a fixed spot in both views */
+  .header-actions{display:flex; align-items:center; gap:10px}
   #reset{
     background:var(--surface-2); color:var(--text); border:1px solid var(--line);
     border-radius:7px; padding:7px 12px; font-size:14px; cursor:pointer;
   }
   #reset:hover{border-color:var(--accent); color:var(--accent)}
-  header.runlog #reset{display:none}
+  /* in Run Log the reset doesn't apply — hide it but keep its space so the nav stays put */
+  header.runlog #reset{visibility:hidden}
   /* ---------- View tabs ---------- */
   .viewtabs{display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:3px}
   .vtab{background:none; border:none; color:var(--muted); font:inherit; font-size:14px; padding:6px 12px; border-radius:7px; cursor:pointer; display:flex; align-items:center; gap:5px}
@@ -109,6 +114,13 @@
   .step.done .steplab{color:var(--brass)}
   .stepbar{width:26px; height:2px; border-radius:2px; background:var(--line)}
   .stepbar.lit{background:linear-gradient(90deg, var(--brass), var(--accent))}
+  .step.avail .stepnum{border-color:var(--accent); color:var(--accent)}
+  .step.avail .steplab{color:var(--text)}
+  /* Panel 3 empty-slot columns */
+  .upcol-empty{border-style:dashed; opacity:.85}
+  .upcol-h .bico-empty{display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; color:var(--faint); font-size:24px}
+  .upcol-h .bname.muted{color:var(--faint); font-weight:500}
+  .emptycol{font-size:12px; color:var(--faint); line-height:1.4; padding:6px 2px}
   /* ---------- Recap (collapsed step) ---------- */
   .recap{display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; flex-wrap:wrap}
   .recap-items{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
@@ -199,6 +211,7 @@
   .ph-tag{flex:0 0 auto; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#fff; background:var(--accent); padding:2px 6px; border-radius:4px; margin-top:1px}
   .ph-why{display:block; color:var(--muted); margin-top:3px}
   .tier{font-size:12px; font-weight:700; padding:1px 5px; border-radius:4px}
+  .card-tier{position:absolute; top:8px; right:8px; z-index:3; cursor:help}
   .tier.S{background:#EEEDFE; color:#534AB7}
   .tier.A{background:#E1ECFB; color:#2C5FB0}
   .tier.B{background:#e6e6e6; color:#555}
@@ -293,6 +306,17 @@
   .tr-badges{display:flex; align-items:center; gap:7px; flex:0 0 auto}
   .tr-badges i{color:var(--faint); font-size:13px}
   .tr-sep{color:var(--faint)}
+  .tiersub{font-family:var(--serif); font-size:13px; color:var(--brass); margin:12px 0 5px; padding-bottom:3px; border-bottom:1px solid var(--brass-dim)}
+  /* Gun + ability pairings */
+  .pairings{margin:24px 0 8px; background:linear-gradient(180deg,#122530,#0e1f27); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,.3)}
+  .pairings h3{font-family:var(--serif); font-size:17px; color:#eadfae; display:flex; align-items:center; gap:8px}
+  .pairings h3 i{color:var(--brass)}
+  .pair{padding:11px 0; border-bottom:1px solid var(--line)}
+  .pair:last-child{border-bottom:none}
+  .pair.hot{background:rgba(39,176,148,.07); margin:0 -18px; padding-left:18px; padding-right:18px; border-left:2px solid var(--accent)}
+  .pair-gear{display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:14px}
+  .pair-plus{color:var(--faint); margin:0 2px}
+  .pair-why{font-size:12px; color:var(--muted); line-height:1.45; margin-top:5px}
   .tier-none{font-size:12px; color:var(--faint); width:18px; text-align:center; display:inline-block}
   /* Runs table */
   .runrow{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--line); cursor:pointer}
@@ -326,12 +350,14 @@
 </head>
 <body>
 <header>
-  <h1>Abyssus Build Advisor<span class="sub">Plan your run, Workbench to Forge · v1.3</span></h1>
-  <nav class="viewtabs">
-    <button class="vtab active" data-action="view" data-view="advisor"><i class="ti ti-target-arrow"></i> Build Advisor</button>
-    <button class="vtab" data-action="view" data-view="runlog"><i class="ti ti-book"></i> Run Log</button>
-  </nav>
-  <button id="reset" data-action="reset"><i class="ti ti-rotate"></i> Start over</button>
+  <h1>Abyssus Build Advisor<span class="sub">Workbench to Forge · Game v1.3 · <span class="toolver">Tool v1.1</span></span></h1>
+  <div class="header-actions">
+    <nav class="viewtabs">
+      <button class="vtab active" data-action="view" data-view="advisor"><i class="ti ti-target-arrow"></i> Build Advisor</button>
+      <button class="vtab" data-action="view" data-view="runlog"><i class="ti ti-book"></i> Run Log</button>
+    </nav>
+    <button id="reset" data-action="reset"><i class="ti ti-rotate"></i> Start over</button>
+  </div>
 </header>
 
 <main>
@@ -368,12 +394,13 @@
         <h2>Blessing upgrades<small>At Ancient Forges, throughout</small></h2>
         <span class="status" id="status-3"></span>
       </div>
-      <div class="lockmsg">Fill all three blessing slots to unlock upgrade priorities.</div>
+      <div class="lockmsg">Pick your first blessing in Panel 2 to start seeing upgrade priorities.</div>
       <div class="panel-body" id="body-3"></div>
     </section>
   </div>
 
   <div id="summary-wrap"></div>
+  <div id="pairings-wrap"></div>
   </div><!-- /view-advisor -->
 
   <div id="view-runlog" class="hidden"></div>
@@ -593,6 +620,19 @@ const DATA = {
     {blessing:'lightning', weapon:'combat-bow', slots:['primary','secondary'], label:'Lightning Bow', confirmed:true,
       why:'Lightning on the Combat Bow’s primary or secondary chains across every nearby target — confirmed runs hit 80% of total damage from Lightning alone.'},
   ],
+
+  // Weapon ⨯ ability pairings that work well on their own merits — independent of blessings.
+  gearPairings:[
+    {weapon:'combat-bow', ability:'Turret', why:'The easiest carry combo: turrets hold aggro and sustain a barrier while you focus sweetspot shots. Freebie charm = near-zero cooldown.'},
+    {weapon:'brine-revolver', ability:'Anchor', why:'Anchor’s invincibility swings let you machine-gun the revolver point-blank; Freebie + Rich Get Richer gives unlimited swings and phases bosses instantly.'},
+    {weapon:'tesla-gun', ability:'Ancient Core', why:'The continuous beam feeds the Core’s multi-hit blasts non-stop — a player favourite for room clear and boss burst.'},
+    {weapon:'disc-thrower', ability:'Ancient Core', why:'Confirmed Deep 30: Barrier on the Core controls and protects while bouncing discs mow the room. Fan charm essential.'},
+    {weapon:'plasma-launcher', ability:'Smiting Spear', why:'“Incredible damage, pretty broken.” Adhesive plasma sticks; shooting the stuck spears with Mr. Boom multiplies the pulses.'},
+    {weapon:'fish-deity', ability:'Turret', why:'Frost turrets perma-freeze while the Fish spams its secondary — with the 50% no-consume charm you can field 30+ turrets.'},
+    {weapon:'harpoon-gun', ability:'Anchor', why:'“Fan and Plentiful Combo make it incredibly OP.” Anchor covers the combo-building reload windows and crystal phases.'},
+    {weapon:'shotgun', ability:'Turret', why:'Confirmed Deep 30 backbone: a Defense/Barrier turret tanks for you while heavy slugs do the work.'},
+    {weapon:'engine-rifle', ability:'Turret', why:'High fire rate + turret spam = the classic “riches get richer” engine. Turrets scale independently of your aim.'},
+  ],
 };
 
 const UPGRADE_INFO = {
@@ -662,9 +702,9 @@ function collapsed(n){
 }
 
 // Player run-completion tracking (persists across "Start over").
-// Defaults: weapons that don't need a run start checked.
+// Loads empty — the player checks off weapons they've actually completed a run with.
 const completed = {};
-DATA.weapons.forEach(w => completed[w.id] = !w.needsCompletion);
+DATA.weapons.forEach(w => completed[w.id] = false);
 
 const SLOT_KEYS = {primary:'blessingPrimary', secondary:'blessingSecondary', ability:'blessingAbility'};
 const SLOT_LABELS = {primary:'Primary Blessing', secondary:'Secondary Blessing', ability:'Ability Blessing'};
@@ -708,20 +748,23 @@ function panel2Done(){
   const b = selectedBlessings();
   return b.length===3 && new Set(b).size===3;
 }
+// Panel 3 opens as soon as one blessing is chosen (upgrades populate per slot).
+const anyBless = () => panel1Done() && selectedBlessings().length>=1;
 
 /* ============================================================= RENDER */
-let prevP1 = false, prevP2 = false;
+let prevP1 = false, prevP2 = false, prevA3 = false;
 function render(){
   computeTiers();
   renderPanel1();
   renderPanel2();
   renderPanel3();
   renderSummary();
+  renderPairings();
   updateChrome();
-  const d1 = panel1Done(), d2 = panel2Done();
+  const d1 = panel1Done(), a3 = anyBless();
   if(d1 && !prevP1) reveal('panel-2');
-  if(d2 && !prevP2) reveal('panel-3');
-  prevP1 = d1; prevP2 = d2;
+  if(a3 && !prevA3) reveal('panel-3');   // reveal upgrades once the first blessing is picked
+  prevP1 = d1; prevA3 = a3;
 }
 
 function updateChrome(){
@@ -743,11 +786,12 @@ function updateChrome(){
   s2.className='status ' + (!d1?'locked':(d2?'complete check':'active'));
   s2.innerHTML = !d1 ? '<i class="ti ti-lock"></i> Locked' : (d2 ? '<i class="ti ti-circle-check"></i> Complete' : 'Active');
 
-  // Panel 3
-  p3.classList.toggle('locked', !d2);
-  p3.classList.toggle('active', d2);
-  s3.className='status ' + (!d2?'locked':'active');
-  s3.innerHTML = !d2 ? '<i class="ti ti-lock"></i> Locked' : 'In progress';
+  // Panel 3 — opens with the first blessing; fills in per slot
+  const a3 = anyBless();
+  p3.classList.toggle('locked', !a3);
+  p3.classList.toggle('active', a3 && !d2);
+  s3.className='status ' + (!a3?'locked':(d2?'complete':'active'));
+  s3.innerHTML = !a3 ? '<i class="ti ti-lock"></i> Locked' : (d2 ? `<i class="ti ti-circle-check"></i> Full set` : `${selectedBlessings().length}/3 slots`);
 
   // collapse completed steps to a recap
   p1.classList.toggle('collapsed', collapsed(1));
@@ -757,21 +801,19 @@ function updateChrome(){
 }
 
 function renderStepper(d1, d2){
-  const steps=[
-    {n:1, label:'Weapon', icon:'ti-crosshair', state: collapsed(1)?'done':(d1?'done':'active')},
-    {n:2, label:'Blessings', icon:'ti-droplet', state: !d1?'locked':(collapsed(2)?'done':(d2?'done':'active'))},
-    {n:3, label:'Upgrades', icon:'ti-anchor', state: !d2?'locked':'active'},
-  ];
-  // the genuinely-active (expanded, incomplete) step gets 'active'; recompute
+  const a3 = anyBless();
+  const locked=[false, !d1, !a3];
+  const done=[d1, d2, false];
+  const labels=['Weapon','Blessings','Upgrades'];
   const activeN = !d1 ? 1 : (!d2 ? 2 : 3);
   let h='';
-  steps.forEach((s,i)=>{
-    const st = s.state==='locked' ? 'locked' : (s.n===activeN ? 'active' : 'done');
-    h += `<button class="step ${st}" data-action="goto-step" data-step="${s.n}"${st==='locked'?' disabled':''}>
-      <span class="stepnum">${st==='done'?'<i class="ti ti-check"></i>':s.n}</span>
-      <span class="steplab">${s.label}</span></button>`;
-    if(i<steps.length-1) h += `<span class="stepbar ${steps[i+1].state==='locked'?'':'lit'}"></span>`;
-  });
+  for(let n=1;n<=3;n++){
+    const st = locked[n-1] ? 'locked' : (n===activeN ? 'active' : (done[n-1] ? 'done' : 'avail'));
+    h += `<button class="step ${st}" data-action="goto-step" data-step="${n}"${st==='locked'?' disabled':''}>
+      <span class="stepnum">${st==='done'?'<i class="ti ti-check"></i>':n}</span>
+      <span class="steplab">${labels[n-1]}</span></button>`;
+    if(n<3) h += `<span class="stepbar ${!locked[n]?'lit':''}"></span>`;
+  }
   document.getElementById('stepper').innerHTML = h;
 }
 
@@ -809,6 +851,7 @@ function renderPanel1(){
     const sel = state.weapon===wp.id ? ' sel':'';
     const done = !!completed[wp.id];
     h += `<div class="tilecard wcard${sel}${done?' wdone':''}" data-action="select-weapon" data-id="${wp.id}">
+      <span class="tier ${weaponTierOf(wp.id)} card-tier" title="${esc(gearTip(WTIERS[wp.id]))}">${weaponTierOf(wp.id)}</span>
       <span class="ico">${weaponIcon(wp,52)}</span>
       <span class="winfo">
         <span class="nm">${esc(wp.name)}</span>
@@ -838,6 +881,7 @@ function renderPanel1(){
     h += `<div class="field"><label>Ability</label><div class="cardgrid">`;
     for(const a of DATA.abilities){
       h += `<button class="tilecard${state.ability===a?' sel':''}" data-action="select-ability" data-val="${esc(a)}">
+        <span class="tier ${abilityTierOf(a)} card-tier" title="${esc(gearTip(ATIERS[a]))}">${abilityTierOf(a)}</span>
         <span class="ico">${abilityIcon(a,46)}</span><span class="nm">${esc(a)}</span></button>`;
     }
     h += '</div></div>';
@@ -945,11 +989,21 @@ function rankUpgrades(b){
 function prLabel(pr){ return pr==='first'?'Take first':pr==='maybe'?'Take if available':'Skip for now'; }
 
 function renderPanel3(){
-  if(!panel2Done()){ document.getElementById('body-3').innerHTML=''; return; }
+  if(!anyBless()){ document.getElementById('body-3').innerHTML=''; return; }
   let h = '<button class="editlink" data-action="edit" data-panel="2"><i class="ti ti-arrow-left"></i> Edit blessing slots</button>';
+  if(!panel2Done()) h += '<div class="tier-note"><i class="ti ti-info-circle"></i> Upgrades fill in per slot as you pick each blessing — you don’t have to choose all three first.</div>';
   h += '<div class="upcols">';
   for(const slot of ['primary','secondary','ability']){
-    const b = bless(state[SLOT_KEYS[slot]]);
+    const id = state[SLOT_KEYS[slot]];
+    if(!id){
+      h += `<div class="upcol upcol-empty">
+        <div class="upcol-h"><span class="bico"><span class="bico-empty"><i class="ti ti-circle-dashed"></i></span></span>
+          <div><div class="slotkind">${SLOT_LABELS[slot]}</div><div class="bname muted">Not chosen yet</div></div></div>
+        <div class="emptycol">Pick your ${slot} blessing in Panel 2 to see its upgrade priorities here.</div>
+      </div>`;
+      continue;
+    }
+    const b = bless(id);
     h += `<div class="upcol">
       <div class="upcol-h"><span class="bico">${blessIcon(b,44)}</span><div><div class="slotkind">${SLOT_LABELS[slot]}</div><div class="bname">${esc(b.name)}</div></div></div>
       <div class="milestone">Your <b>3rd</b> ${esc(b.name)} blessing unlocks the <b>Minor Blessing</b> — a major power spike. Your <b>6th</b> unlocks the <b>Major Blessing</b>.</div>`;
@@ -989,6 +1043,24 @@ function renderSummary(){
     </div>`;
   }
   h += '</div></div>';
+  wrap.innerHTML = h;
+}
+
+/* ---------- Gun + ability pairings (blessing-agnostic reference) ---------- */
+function renderPairings(){
+  const wrap = document.getElementById('pairings-wrap');
+  let h = `<div class="pairings"><h3><i class="ti ti-diamonds"></i> Gun + ability pairings</h3>
+    <div class="ssub">Loadouts that work on their own merits — pick your blessings around them.</div>`;
+  for(const p of DATA.gearPairings){
+    const w = byId(p.weapon); if(!w) continue;
+    const hot = (state.weapon===p.weapon) || (state.ability===p.ability);
+    h += `<div class="pair${hot?' hot':''}">
+      <div class="pair-gear">${weaponIcon(w,30)} <b>${esc(w.name)}</b> <span class="pair-plus">+</span> ${abilityIcon(p.ability,26)} <b>${esc(p.ability)}</b>
+        <span class="tier ${weaponTierOf(w.id)}">${weaponTierOf(w.id)}</span><span class="tier ${abilityTierOf(p.ability)}">${abilityTierOf(p.ability)}</span></div>
+      <div class="pair-why">${esc(p.why)}</div>
+    </div>`;
+  }
+  h += '</div>';
   wrap.innerHTML = h;
 }
 
@@ -1075,12 +1147,66 @@ function computeTiers(){
     TIERS[b.id]={tier:toTier(blendedPts), comm:b.tier, group:toTier(groupPts),
       appear:o.appear, dmg:Math.round(o.avgDmg), win:Math.round(o.winRate*100), blended:true};
   }
+  computeGearTiers();
 }
 function tierOf(id){ return (TIERS[id]&&TIERS[id].tier) || (bless(id)?bless(id).tier:'B'); }
 function tierTip(id){
   const t=TIERS[id]; if(!t) return '';
   return t.blended
     ? `Community ${t.comm} · Your group ${t.group} (${t.appear} run${t.appear>1?'s':''}, ${t.dmg}% avg dmg, ${t.win}% win) → Blended ${t.tier}`
+    : `Community ${t.comm} · no group runs logged yet`;
+}
+
+/* ---------- Gun & ability tiers (blended like blessings) ----------
+   Community weapon tiers are synthesised from the reference's weapon notes (S-tier call-outs, Deep-30
+   builds, damage records) — community-informed, not a formal published list. Ability tiers come from
+   the reference's community ability tier list. Group score = usage + performance (run win-rate + total
+   damage) across runs where that weapon/ability was logged. */
+const WEAPON_TIER = {'tesla-gun':'S','disc-thrower':'S','brine-revolver':'S','plasma-launcher':'A','combat-bow':'A','shotgun':'A','fish-deity':'A','harpoon-gun':'B','engine-rifle':'B'};
+const ABILITY_TIER = {'Anchor':'S','Turret':'S','Brine Field':'A','Ancient Core':'A','Smiting Spear':'B','Frag Grenade':'B'};
+let WTIERS={}, ATIERS={};
+// Generic blended-tier builder for a gear category keyed off a run field.
+function blendGearTiers(keys, commMap, runKey){
+  const total=runs.length;
+  const st={}; keys.forEach(k=>st[k]={appear:0,wins:0,dmg:[]});
+  for(const r of runs){
+    const k=r[runKey]; if(k==null||!st[k]) continue;
+    st[k].appear++; if(r.status==='Successful') st[k].wins++;
+    if(Number(r.damageTotal)) st[k].dmg.push(Number(r.damageTotal));
+  }
+  let maxUsage=0, maxDmg=0; const raw={};
+  for(const k of keys){
+    const s=st[k];
+    const usageRate= total? s.appear/total : 0;
+    const avgDmg= s.dmg.length? s.dmg.reduce((a,c)=>a+c,0)/s.dmg.length : 0;
+    const winRate= s.appear? s.wins/s.appear : 0;
+    raw[k]={appear:s.appear, usageRate, avgDmg, winRate};
+    if(usageRate>maxUsage)maxUsage=usageRate; if(avgDmg>maxDmg)maxDmg=avgDmg;
+  }
+  const out={};
+  for(const k of keys){
+    const o=raw[k], comm=commMap[k]||'B', commPts=TP[comm]||2;
+    if(!o.appear){ out[k]={tier:comm, comm, group:null, appear:0, blended:false}; continue; }
+    const normUsage= maxUsage? o.usageRate/maxUsage : 0;
+    const normDmg= maxDmg? o.avgDmg/maxDmg : 0;
+    const perf= 0.6*normDmg + 0.4*o.winRate;
+    const strength= 0.5*normUsage + 0.5*perf;
+    const groupPts= 1 + 3*strength;
+    const blendedPts= 0.5*commPts + 0.5*groupPts;
+    out[k]={tier:toTier(blendedPts), comm, group:toTier(groupPts), appear:o.appear, dmg:Math.round(o.avgDmg), win:Math.round(o.winRate*100), blended:true};
+  }
+  return out;
+}
+function computeGearTiers(){
+  WTIERS = blendGearTiers(DATA.weapons.map(w=>w.id), WEAPON_TIER, 'weapon');
+  ATIERS = blendGearTiers(DATA.abilities, ABILITY_TIER, 'ability');
+}
+const weaponTierOf = id => (WTIERS[id]&&WTIERS[id].tier) || WEAPON_TIER[id] || 'B';
+const abilityTierOf = a => (ATIERS[a]&&ATIERS[a].tier) || ABILITY_TIER[a] || 'B';
+function gearTip(t){
+  if(!t) return '';
+  return t.blended
+    ? `Community ${t.comm} · Your group ${t.group} (${t.appear} run${t.appear>1?'s':''}, ${abbr(t.dmg)} avg dmg, ${t.win}% win) → Blended ${t.tier}`
     : `Community ${t.comm} · no group runs logged yet`;
 }
 
@@ -1206,19 +1332,26 @@ function insightsHTML(){
         <span class="bval">${r.s.n}r · ${Math.round(r.s.wins/r.s.n*100)}% · ${abbr(a)}</span></div>`;
     }
   }
-  // blended tier board
+  // blended tier boards — blessings, weapons, abilities
   h+='<h4>Tier ratings — community ⊕ your group (50/50)</h4>';
-  h+='<div class="tierboard-head"><span>Aspect</span><span>Online · Group · Blended</span></div>';
-  const board=DATA.blessings.map(b=>({b, t:TIERS[b.id]})).filter(x=>x.t)
-    .sort((a,b)=> (TP[b.t.tier]||0)-(TP[a.t.tier]||0) || (b.t.appear||0)-(a.t.appear||0));
-  for(const {b,t} of board){
-    const g = t.blended ? `<span class="tier ${t.group}" title="Your group: ${t.appear} run(s), ${t.dmg}% avg dmg, ${t.win}% win">${t.group}</span>`
-                        : '<span class="tier-none" title="No logged runs yet">—</span>';
-    h+=`<div class="tierrow">
-      <span class="tr-name">${blessIcon(b,22)} ${esc(b.name)}</span>
-      <span class="tr-badges"><span class="tier ${t.comm}" title="Community consensus">${t.comm}</span><span class="tr-sep">·</span>${g}<i class="ti ti-arrow-right"></i><span class="tier ${t.tier}" title="Blended rating">${t.tier}</span></span>
-    </div>`;
-  }
+  h+='<div class="tierboard-head"><span>Item</span><span>Online · Group · Blended</span></div>';
+  h+=tierSection(DATA.blessings.map(b=>({name:b.name, icon:blessIcon(b,22), t:TIERS[b.id]})), 'Blessings');
+  h+=tierSection(DATA.weapons.map(w=>({name:w.name, icon:weaponIcon(w,22), t:WTIERS[w.id]})), 'Weapons');
+  h+=tierSection(DATA.abilities.map(a=>({name:a, icon:abilityIcon(a,22), t:ATIERS[a]})), 'Abilities');
+  return h;
+}
+function tierRowHTML(icon, name, t){
+  if(!t) return '';
+  const g = t.blended ? `<span class="tier ${t.group}" title="Your group: ${t.appear} run(s), ${t.win}% win">${t.group}</span>`
+                      : '<span class="tier-none" title="No logged runs yet">—</span>';
+  return `<div class="tierrow"><span class="tr-name">${icon} ${esc(name)}</span>
+    <span class="tr-badges"><span class="tier ${t.comm}" title="Community consensus">${t.comm}</span><span class="tr-sep">·</span>${g}<i class="ti ti-arrow-right"></i><span class="tier ${t.tier}" title="Blended rating">${t.tier}</span></span></div>`;
+}
+function tierSection(items, label){
+  const rows=items.filter(x=>x.t).sort((a,b)=> (TP[b.t.tier]||0)-(TP[a.t.tier]||0) || (b.t.appear||0)-(a.t.appear||0));
+  if(!rows.length) return '';
+  let h=`<div class="tiersub">${label}</div>`;
+  for(const r of rows) h+=tierRowHTML(r.icon, r.name, r.t);
   return h;
 }
 
@@ -1353,7 +1486,7 @@ document.addEventListener('click', e=>{
   }
   else if(act==='reset'){
     Object.keys(state).forEach(k=> state[k]=null);
-    blessingError=null; prevP1=false; prevP2=false;
+    blessingError=null; prevP1=false; prevP2=false; prevA3=false;
     forceOpen[1]=forceOpen[2]=forceOpen[3]=false; render();
     window.scrollTo({top:0, behavior:'smooth'});
   }
